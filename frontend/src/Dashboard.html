@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProGit - Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #F4F7FC;
+            padding: 2rem;
+        }
+
+        .dashboard {
+            max-width: 1280px;
+            margin: 0 auto;
+            background: #FFFFFF;
+            border-radius: 32px;
+            padding: 2rem;
+            box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.08);
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #EDF2F7;
+        }
+
+        .greeting h1 {
+            font-size: 1.85rem;
+            font-weight: 700;
+            color: #1F3B4C;
+        }
+
+        .greeting p {
+            color: #5B6E8C;
+            margin-top: 6px;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #F8FAFE;
+            padding: 8px 18px;
+            border-radius: 60px;
+            border: 1px solid #E4ECF3;
+        }
+
+        .avatar {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(145deg, #2B6A9F, #1E4A6E);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .user-info span {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #1F3B4C;
+        }
+
+        .user-info small {
+            font-size: 0.7rem;
+            color: #7D8FAB;
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            color: #7D8FAB;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-left: 10px;
+        }
+
+        .logout-btn:hover {
+            color: #ff6b6b;
+        }
+
+        .section-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 1.5rem 0 1.2rem 0;
+        }
+
+        .section-title h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #1E3A4D;
+        }
+
+        .section-title a {
+            color: #2B6A9F;
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .project-card {
+            background: #FFFFFF;
+            border-radius: 24px;
+            padding: 1.4rem;
+            border: 1px solid #EAF0F6;
+            transition: all 0.2s ease;
+        }
+
+        .project-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 28px -12px rgba(0, 0, 0, 0.1);
+        }
+
+        .project-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .project-title h3 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #1C3E54;
+        }
+
+        .status-badge {
+            background: #E9F4EA;
+            color: #2E7D64;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 50px;
+        }
+
+        .project-description {
+            color: #5F7A9A;
+            font-size: 0.9rem;
+            line-height: 1.45;
+            margin: 0.6rem 0 1.2rem 0;
+            min-height: 60px;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #F0F4FA;
+            padding-top: 1rem;
+        }
+
+        .active-tag {
+            color: #1F6392;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .view-link {
+            color: #2B6A9F;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 750px) {
+            body {
+                padding: 1rem;
+            }
+            .dashboard {
+                padding: 1.2rem;
+            }
+            .greeting h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard" id="dashboard">
+        <div class="dashboard-header">
+            <div class="greeting">
+                <h1>Dashboard</h1>
+                <p>Welcome back, <span id="userEmail">john_doe</span>. Here's what's happening.</p>
+            </div>
+            <div class="user-profile">
+                <div class="avatar" id="userAvatar">JD</div>
+                <div class="user-info">
+                    <span id="userName">john_doe</span>
+                    <small>Product Studio</small>
+                </div>
+                <button class="logout-btn" onclick="logout()">🚪</button>
+            </div>
+        </div>
+
+        <div class="section-title">
+            <h2>My Projects</h2>
+            <a href="#">View all →</a>
+        </div>
+
+        <div class="projects-grid">
+            <div class="project-card">
+                <div class="project-title">
+                    <h3>Website Redesign</h3>
+                    <span class="status-badge">Active</span>
+                </div>
+                <div class="project-description">
+                    Renaming the landing page UI and UX flows for G3 launch.
+                </div>
+                <div class="card-footer">
+                    <span class="active-tag">● Active</span>
+                    <a href="#" class="view-link">View →</a>
+                </div>
+            </div>
+
+            <div class="project-card">
+                <div class="project-title">
+                    <h3>API Integration</h3>
+                    <span class="status-badge">Active</span>
+                </div>
+                <div class="project-description">
+                    Connected payment gateway and third-party audit services.
+                </div>
+                <div class="card-footer">
+                    <span class="active-tag">● Active</span>
+                    <a href="#" class="view-link">View →</a>
+                </div>
+            </div>
+
+            <div class="project-card">
+                <div class="project-title">
+                    <h3>Mobile App</h3>
+                    <span class="status-badge">Active</span>
+                </div>
+                <div class="project-description">
+                    React Native app — sprint 2 in progress.
+                </div>
+                <div class="card-footer">
+                    <span class="active-tag">● Active</span>
+                    <a href="#" class="view-link">View →</a>
+                </div>
+            </div>
+
+            <div class="project-card">
+                <div class="project-title">
+                    <h3>Data Pipeline</h3>
+                    <span class="status-badge">Active</span>
+                </div>
+                <div class="project-description">
+                    ETL pipeline for analytics dashboard ingestion.
+                </div>
+                <div class="card-footer">
+                    <span class="active-tag">● Active</span>
+                    <a href="#" class="view-link">View →</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function logout() {
+            localStorage.removeItem('currentUser');
+            window.location.href = 'login.html';
+        }
+
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser) {
+            window.location.href = 'login.html';
+        } else {
+            document.getElementById('userEmail').textContent = currentUser.email;
+            document.getElementById('userName').textContent = currentUser.email.split('@')[0];
+            document.getElementById('userAvatar').textContent = currentUser.email.charAt(0).toUpperCase();
+        }
+    </script>
+</body>
+</html>
