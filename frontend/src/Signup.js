@@ -1,7 +1,4 @@
 import React, { useState } from 'react';
-import axios from 'axios';
-
-const API_URL = 'http://localhost:5000/api';
 
 function Signup({ onSwitchToLogin }) {
     const [email, setEmail] = useState('');
@@ -25,18 +22,21 @@ function Signup({ onSwitchToLogin }) {
             return;
         }
 
-        try {
-            const res = await axios.post(`${API_URL}/auth/register`, { 
-                email, 
-                password 
-            });
-            setSuccess('Account created! Please sign in.');
-            setTimeout(() => {
-                onSwitchToLogin();
-            }, 2000);
-        } catch (err) {
-            setError(err.response?.data?.message || 'Registration failed');
+        const demoUsers = JSON.parse(localStorage.getItem('demoUsers') || '[]');
+        
+        const userExists = demoUsers.find(u => u.email === email);
+        if (userExists) {
+            setError('User already exists');
+            return;
         }
+
+        demoUsers.push({ email, password });
+        localStorage.setItem('demoUsers', JSON.stringify(demoUsers));
+        
+        setSuccess('Account created! Redirecting to login...');
+        setTimeout(() => {
+            onSwitchToLogin();
+        }, 2000);
     };
 
     return (
@@ -49,6 +49,34 @@ function Signup({ onSwitchToLogin }) {
             position: 'relative',
             overflow: 'hidden'
         }}>
+            <div style={{
+                position: 'absolute',
+                width: '300px',
+                height: '300px',
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(74,144,226,0.2), transparent)',
+                top: '-100px',
+                left: '-100px',
+                animation: 'float 20s ease-in-out infinite'
+            }}></div>
+            <div style={{
+                position: 'absolute',
+                width: '200px',
+                height: '200px',
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(74,144,226,0.15), transparent)',
+                bottom: '-50px',
+                right: '-50px',
+                animation: 'float 15s ease-in-out infinite reverse'
+            }}></div>
+
+            <style>{`
+                @keyframes float {
+                    0%, 100% { transform: translate(0, 0) scale(1); }
+                    50% { transform: translate(30px, -20px) scale(1.1); }
+                }
+            `}</style>
+
             <div style={{
                 width: '520px',
                 height: 'auto',
@@ -97,7 +125,7 @@ function Signup({ onSwitchToLogin }) {
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'rgba(255,255,255,0.9)', marginBottom: '8px', textTransform: 'uppercase' }}>Password</label>
                         <input
                             type="password"
-                            placeholder="Create a password"
+                            placeholder="Create a password (min 6 characters)"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             style={{
