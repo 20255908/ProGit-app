@@ -1,23 +1,26 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import DashboardNew from './components/DashboardNew';
 import Signup from './components/Signup';
 
 const API_URL = 'http://localhost:5000/api';
 
-function Login({ onLogin }) {
+function Login({ onLogin, onSwitchToSignup }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        try {
-            const res = await axios.post(`${API_URL}/auth/login`, { email, password });
-            localStorage.setItem('token', res.data.token);
-            localStorage.setItem('user', JSON.stringify(res.data.user));
-            onLogin(res.data.user);
-        } catch (err) {
+        
+        const demoUsers = JSON.parse(localStorage.getItem('demoUsers') || '[]');
+        const user = demoUsers.find(u => u.email === email && u.password === password);
+        
+        if (user) {
+            const userData = { email: user.email, name: user.email.split('@')[0] };
+            localStorage.setItem('user', JSON.stringify(userData));
+            onLogin(userData);
+        } else {
             setError('Invalid credentials');
         }
     };
@@ -32,7 +35,6 @@ function Login({ onLogin }) {
             position: 'relative',
             overflow: 'hidden'
         }}>
-            {/* Animated background orbs */}
             <div style={{
                 position: 'absolute',
                 width: '300px',
@@ -61,7 +63,6 @@ function Login({ onLogin }) {
                 }
             `}</style>
 
-            {/* Big Blue Circle Container */}
             <div style={{
                 width: '520px',
                 height: '520px',
@@ -151,23 +152,30 @@ function Login({ onLogin }) {
                 </form>
 
                 <div style={{ textAlign: 'center', marginTop: '28px' }}>
-                    <a href="#" style={{ color: 'rgba(255,255,255,0.85)', textDecoration: 'none', fontSize: '13px', fontWeight: '500' }}>Create Account</a>
+                    <a 
+                        href="#" 
+                        onClick={(e) => {
+                            e.preventDefault();
+                            onSwitchToSignup();
+                        }} 
+                        style={{ color: 'rgba(255,255,255,0.85)', textDecoration: 'none', fontSize: '13px', fontWeight: '500' }}
+                    >
+                        Create Account
+                    </a>
                 </div>
             </div>
         </div>
     );
 }
 
-// Main App Component
 function App() {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [showSignup, setShowSignup] = useState(false);
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
         const savedUser = localStorage.getItem('user');
-        if (token && savedUser) {
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        if (savedUser) {
             setUser(JSON.parse(savedUser));
         }
         setLoading(false);
@@ -175,12 +183,10 @@ function App() {
 
     const handleLogin = (userData) => {
         setUser(userData);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem('token')}`;
     };
 
     const handleLogout = () => {
         localStorage.clear();
-        delete axios.defaults.headers.common['Authorization'];
         setUser(null);
     };
 
@@ -202,7 +208,13 @@ function App() {
         );
     }
 
-    if (!user) return <Login onLogin={handleLogin} />;
+    if (!user) {
+        if (showSignup) {
+            return <Signup onSwitchToLogin={() => setShowSignup(false)} />;
+        }
+        return <Login onLogin={handleLogin} onSwitchToSignup={() => setShowSignup(true)} />;
+    }
+    
     return <DashboardNew user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
 }
 
