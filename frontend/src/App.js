@@ -18,25 +18,15 @@ function Login({ onLogin, onSwitchToSignup }) {
         );
 
         if (user) {
-<<<<<<< HEAD
             const userData = {
                 email: user.email,
                 name: user.fullName || user.email.split("@")[0],
                 fullName: user.fullName,
-=======
-            const userData = { 
-                email: user.email, 
-                fullName: user.fullName 
->>>>>>> dda851e25f7906324cfd84563d0737e3e6b6e51c
             };
             localStorage.setItem("currentUser", JSON.stringify(userData));
             onLogin(userData);
         } else {
-<<<<<<< HEAD
             setError("Invalid credentials. Please create an account first.");
-=======
-            setError('Invalid credentials');
->>>>>>> dda851e25f7906324cfd84563d0737e3e6b6e51c
         }
     };
 
@@ -113,25 +103,15 @@ function Signup({ onSwitchToLogin }) {
 
         const userExists = users.find((u) => u.email === email);
         if (userExists) {
-<<<<<<< HEAD
             setError("User already exists. Please sign in.");
-=======
-            setError('User already exists');
->>>>>>> dda851e25f7906324cfd84563d0737e3e6b6e51c
             return;
         }
 
         users.push({ fullName, email, password });
-<<<<<<< HEAD
         localStorage.setItem("users", JSON.stringify(users));
 
         setSuccess("Account created successfully! Redirecting...");
 
-=======
-        localStorage.setItem('users', JSON.stringify(users));
-        
-        setSuccess('Account created! Redirecting...');
->>>>>>> dda851e25f7906324cfd84563d0737e3e6b6e51c
         setTimeout(() => {
             onSwitchToLogin();
         }, 1500);
@@ -177,7 +157,6 @@ function Signup({ onSwitchToLogin }) {
                     />
                     <button type="submit">Create Account</button>
                 </form>
-<<<<<<< HEAD
 
                 <p>
                     Already have an account?{" "}
@@ -191,73 +170,6 @@ function Signup({ onSwitchToLogin }) {
                         Sign In
                     </a>
                 </p>
-=======
-                <p>Already have an account? <a href="#" onClick={(e) => { e.preventDefault(); onSwitchToLogin(); }}>Sign In</a></p>
-            </div>
-        </div>
-    );
-}
-
-function Dashboard({ user, onLogout }) {
-    const projects = [
-        { id: 1, name: 'Website Redesign', description: 'Redesign the landing page UI and UX flows for Q3 launch.' },
-        { id: 2, name: 'API Integration', description: 'Connect payment gateway and third-party API services.' },
-        { id: 3, name: 'Mobile App', description: 'React Native app — sprint 2 in progress.' },
-        { id: 4, name: 'Data Pipeline', description: 'ETL pipeline for analytics dashboard ingestion.' }
-    ];
-
-    const getUserInitials = () => {
-        if (user?.fullName) {
-            const parts = user.fullName.split(' ');
-            if (parts.length >= 2) {
-                return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
-            }
-            return user.fullName.substring(0, 2).toUpperCase();
-        }
-        return 'JD';
-    };
-
-    const getFirstName = () => {
-        if (user?.fullName) return user.fullName.split(' ')[0];
-        return 'User';
-    };
-
-    return (
-        <div className="dashboard-container">
-            <div className="dashboard">
-                <div className="dashboard-header">
-                    <div className="greeting">
-                        <h1>Dashboard</h1>
-                        <p>Welcome back, {getFirstName()}. Here's what's happening with your projects.</p>
-                    </div>
-                    <div className="user-profile">
-                        <div className="avatar">{getUserInitials()}</div>
-                        <div className="user-info">
-                            <span>{user?.fullName || user?.email}</span>
-                            <small>Product Studio</small>
-                        </div>
-                        <button className="logout-btn" onClick={onLogout}>Logout</button>
-                    </div>
-                </div>
-                <div className="section-title">
-                    <h2>My Projects</h2>
-                </div>
-                <div className="projects-grid">
-                    {projects.map(project => (
-                        <div key={project.id} className="project-card">
-                            <div className="project-title">
-                                <h3>{project.name}</h3>
-                                <span className="status-badge">Active</span>
-                            </div>
-                            <p className="project-description">{project.description}</p>
-                            <div className="card-footer">
-                                <span className="active-tag">● Active</span>
-                                <a href="#" className="view-link">View →</a>
-                            </div>
-                        </div>
-                    ))}
-                </div>
->>>>>>> dda851e25f7906324cfd84563d0737e3e6b6e51c
             </div>
         </div>
     );
