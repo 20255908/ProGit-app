@@ -13,7 +13,11 @@ function Login({ onLogin, onSwitchToSignup }) {
         const user = users.find(u => u.email === email && u.password === password);
         
         if (user) {
-            const userData = { email: user.email, name: user.email.split('@')[0] };
+            const userData = { 
+                email: user.email, 
+                name: user.fullName || user.email.split('@')[0],
+                fullName: user.fullName 
+            };
             localStorage.setItem('currentUser', JSON.stringify(userData));
             onLogin(userData);
         } else {
@@ -160,6 +164,7 @@ function Login({ onLogin, onSwitchToSignup }) {
 }
 
 function Signup({ onSwitchToLogin }) {
+    const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -171,7 +176,7 @@ function Signup({ onSwitchToLogin }) {
         setError('');
         setSuccess('');
 
-        if (!email || !password) {
+        if (!fullName || !email || !password) {
             setError('Please fill in all fields');
             return;
         }
@@ -194,7 +199,7 @@ function Signup({ onSwitchToLogin }) {
             return;
         }
 
-        users.push({ email, password });
+        users.push({ fullName, email, password });
         localStorage.setItem('users', JSON.stringify(users));
         
         setSuccess('Account created successfully! Redirecting to login...');
@@ -244,7 +249,7 @@ function Signup({ onSwitchToLogin }) {
             <div style={{
                 width: '520px',
                 height: 'auto',
-                minHeight: '550px',
+                minHeight: '600px',
                 borderRadius: '50%',
                 background: 'radial-gradient(circle at 35% 30%, #4a90e2, #1e3a8a, #0f2b5c)',
                 display: 'flex',
@@ -264,6 +269,27 @@ function Signup({ onSwitchToLogin }) {
                 {success && <div style={{ color: '#6bff6b', marginBottom: '15px', fontSize: '14px' }}>{success}</div>}
 
                 <form onSubmit={handleSubmit} style={{ width: '100%' }}>
+                    <div style={{ width: '100%', marginBottom: '22px', textAlign: 'left' }}>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'rgba(255,255,255,0.9)', marginBottom: '8px', textTransform: 'uppercase' }}>Full Name</label>
+                        <input
+                            type="text"
+                            placeholder="Enter your full name"
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '14px 18px',
+                                fontSize: '15px',
+                                border: 'none',
+                                borderRadius: '12px',
+                                outline: 'none',
+                                backgroundColor: 'rgba(255,255,255,0.12)',
+                                color: 'white',
+                            }}
+                            required
+                        />
+                    </div>
+
                     <div style={{ width: '100%', marginBottom: '22px', textAlign: 'left' }}>
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'rgba(255,255,255,0.9)', marginBottom: '8px', textTransform: 'uppercase' }}>Email address</label>
                         <input
@@ -388,6 +414,7 @@ function App() {
 
     const handleNavigate = (page) => {
         console.log('Navigate to:', page);
+        // Add navigation logic here if needed
     };
 
     if (loading) {
