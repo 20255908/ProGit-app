@@ -1,186 +1,453 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
 function DashboardNew({ user, onLogout }) {
-    const [projects, setProjects] = useState([
-        { id: 1, name: 'Website Redesign', description: 'Revamp the landing page UI and UX flows for Q3 launch.', progress: 65, dueDate: '2026-05-15', tasks: { completed: 8, total: 12 } },
-        { id: 2, name: 'API Integration', description: 'Connect payment gateway and third-party auth services.', progress: 40, dueDate: '2026-05-20', tasks: { completed: 4, total: 10 } },
-        { id: 3, name: 'Mobile App', description: 'React Native app — sprint 2 in progress.', progress: 75, dueDate: '2026-05-10', tasks: { completed: 15, total: 20 } },
-        { id: 4, name: 'Data Pipeline', description: 'ETL pipeline for analytics dashboard ingestion.', progress: 25, dueDate: '2026-05-30', tasks: { completed: 3, total: 12 } },
+  const [projects, setProjects] = useState([
+    {
+      id: 1,
+      name: "Website Redesign",
+      description: "Revamp the landing page UI and UX flows for Q3 launch.",
+    },
+    {
+      id: 2,
+      name: "API Integration",
+      description: "Connect payment gateway and third-party auth services.",
+    },
+    {
+      id: 3,
+      name: "Mobile App",
+      description: "React Native app — sprint 2 in progress.",
+    },
+    {
+      id: 4,
+      name: "Data Pipeline",
+      description: "ETL pipeline for analytics dashboard ingestion.",
+    },
+  ]);
+
+  const [showModal, setShowModal] = useState(false);
+  const [newProject, setNewProject] = useState({ 
+    name: "", 
+    description: "",
+    goalDate: "",
+    goalTime: ""
+  });
+  
+  const handleCreateProject = () => {
+    if (!newProject.name.trim()) return;
+
+    setProjects([
+      ...projects,
+      {
+        id: projects.length + 1,
+        name: newProject.name,
+        description: newProject.description || "No description provided",
+      },
     ]);
 
-    const [showNewProject, setShowNewProject] = useState(false);
-    const [newProject, setNewProject] = useState({ name: '', description: '' });
+    setNewProject({ name: "", description: "", goalDate: "", goalTime: "" });
+    setShowModal(false);
+  };
 
-    const handleCreateProject = () => {
-        if (newProject.name) {
-            setProjects([...projects, {
-                id: projects.length + 1,
-                name: newProject.name,
-                description: newProject.description,
-                progress: 0,
-                dueDate: new Date().toISOString().split('T')[0],
-                tasks: { completed: 0, total: 0 }
-            }]);
-            setNewProject({ name: '', description: '' });
-            setShowNewProject(false);
-        }
-    };
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#020617",
+        color: "white",
+        fontFamily:
+          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      }}
+    >
+      {/* NAVBAR */}
+      <nav
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "1rem 2rem",
+          borderBottom: "2px solid #06b6d4",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <span style={{ fontSize: "1.5rem", color: "#22d3ee" }}>
+            ProGit
+          </span>
+          <span style={{ color: "#64748b" }}>/ Dashboard</span>
+        </div>
 
-    const totalTasks = projects.reduce((sum, p) => sum + p.tasks.completed, 0);
-    const totalAllTasks = projects.reduce((sum, p) => sum + p.tasks.total, 0);
-    const avgProgress = Math.round(projects.reduce((sum, p) => sum + p.progress, 0) / projects.length);
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <span>Dashboard</span>
+          <span>Project</span>
 
-    return (
-        <div style={{ minHeight: '100vh', background: '#f0f2f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
-            {/* Navbar */}
-            <nav style={{ background: 'white', padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '1.8rem' }}>🚀</span>
-                    <span style={{ fontSize: '1.3rem', fontWeight: 'bold', background: 'linear-gradient(135deg, #667eea, #764ba2)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>ProGit</span>
+          <div
+            style={{
+              background: "#0891b2",
+              width: "32px",
+              height: "32px",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: "bold",
+            }}
+          >
+            {user?.name?.[0] || "U"}
+          </div>
+
+          <span>{user?.name || "john_doe"}</span>
+
+          <button
+            onClick={onLogout}
+            style={{
+              background: "#ef4444",
+              border: "none",
+              padding: "6px 12px",
+              borderRadius: "6px",
+              color: "white",
+              cursor: "pointer",
+            }}
+          >
+            Logout
+          </button>
+        </div>
+      </nav>
+
+      {/* CONTENT */}
+      <div style={{ padding: "2rem" }}>
+        <h1 style={{ fontSize: "2rem", marginBottom: "0.25rem" }}>
+          Dashboard
+        </h1>
+
+        <p style={{ color: "#94a3b8", marginBottom: "2rem" }}>
+          Welcome back, {user?.name || "john_doe"}.
+        </p>
+
+        {/* HEADER */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "1.5rem",
+          }}
+        >
+          <h2
+            style={{
+              borderBottom: "2px solid #06b6d4",
+              display: "inline-block",
+              paddingBottom: "4px",
+            }}
+          >
+            My Projects
+          </h2>
+
+          <button
+            onClick={() => setShowModal(true)}
+            style={{
+              background: "#06b6d4",
+              color: "#022c22",
+              border: "none",
+              padding: "8px 14px",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontWeight: "500",
+            }}
+          >
+            + New Project
+          </button>
+        </div>
+
+        {/* GRID */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "3fr 1fr",
+            gap: "1.5rem",
+          }}
+        >
+          {/* PROJECTS */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, 1fr)",
+              gap: "1.5rem",
+            }}
+          >
+            {projects.map((project) => (
+              <div
+                key={project.id}
+                style={{
+                  background: "#020617",
+                  border: "1px solid #0f172a",
+                  borderTop: "3px solid #06b6d4",
+                  borderRadius: "10px",
+                  padding: "1.2rem",
+                }}
+              >
+                <h3>{project.name}</h3>
+                <p style={{ color: "#64748b", fontSize: "0.85rem" }}>
+                  {project.description}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* TEAM */}
+          <div
+            style={{
+              background: "#020617",
+              border: "1px solid #0f172a",
+              borderTop: "3px solid #06b6d4",
+              borderRadius: "10px",
+              padding: "1rem",
+            }}
+          >
+            <h3>Team Members</h3>
+
+            {[
+              { name: "Keiran Reyes", role: "Lead", color: "#06b6d4" },
+              { name: "May Joy Agunod", role: "Frontend", color: "#22c55e" },
+              { name: "Karylle Dampiles", role: "Backend", color: "#f59e0b" },
+              { name: "Merdy Francisco", role: "UI/UX", color: "#ef4444" },
+            ].map((m, i) => (
+              <div key={i} style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: "50%",
+                    background: m.color,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {m.name.split(" ").map((n) => n[0]).join("")}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <span style={{ color: '#374151' }}>Hello, {user?.name?.split(' ')[0] || 'User'}</span>
-                    <button onClick={onLogout} style={{ background: '#f56565', color: 'white', padding: '0.5rem 1rem', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Logout</button>
+
+                <div>
+                  <div>{m.name}</div>
+                  <div style={{ fontSize: "0.7rem", color: "#64748b" }}>
+                    {m.role}
+                  </div>
                 </div>
-            </nav>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
-            <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
-                {/* Welcome Section */}
-                <div style={{ marginBottom: '2rem' }}>
-                    <h1 style={{ fontSize: '1.8rem', color: '#1f2937', marginBottom: '0.25rem' }}>Welcome back, {user?.name?.split(' ')[0] || 'User'}! 👋</h1>
-                    <p style={{ color: '#6b7280' }}>Here's what's happening with your projects today.</p>
-                </div>
+      {/* MODAL - Styled like your Create New Task design */}
+      {showModal && (
+        <div
+          onClick={() => setShowModal(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.8)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#0f172a",
+              borderRadius: "12px",
+              borderTop: "3px solid #06b6d4",
+              padding: "2rem",
+              width: "100%",
+              maxWidth: "500px",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+            }}
+          >
+            <h2 style={{
+              color: "white",
+              fontSize: "1.5rem",
+              fontWeight: "600",
+              marginBottom: "0.5rem",
+            }}>
+              Create New Project
+            </h2>
 
-                {/* Stats Cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
-                    <div style={{ background: 'white', padding: '1rem', borderRadius: '12px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#667eea' }}>{projects.length}</div>
-                        <div style={{ color: '#6b7280', fontSize: '0.85rem' }}>Active Projects</div>
-                    </div>
-                    <div style={{ background: 'white', padding: '1rem', borderRadius: '12px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#667eea' }}>{totalTasks}/{totalAllTasks}</div>
-                        <div style={{ color: '#6b7280', fontSize: '0.85rem' }}>Tasks Completed</div>
-                    </div>
-                    <div style={{ background: 'white', padding: '1rem', borderRadius: '12px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#667eea' }}>5</div>
-                        <div style={{ color: '#6b7280', fontSize: '0.85rem' }}>Team Members</div>
-                    </div>
-                    <div style={{ background: 'white', padding: '1rem', borderRadius: '12px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#667eea' }}>{avgProgress}%</div>
-                        <div style={{ color: '#6b7280', fontSize: '0.85rem' }}>Avg Progress</div>
-                    </div>
-                </div>
+            <p style={{
+              color: "#64748b",
+              fontSize: "0.875rem",
+              marginBottom: "1.5rem",
+            }}>
+              Fill in the details below to add a new project.
+            </p>
 
-                {/* Projects Section */}
-                <div style={{ marginBottom: '2rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                        <h2 style={{ fontSize: '1.3rem', color: '#1f2937' }}>📁 My Projects</h2>
-                        <button onClick={() => setShowNewProject(true)} style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', padding: '0.5rem 1rem', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>+ New Project</button>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1rem' }}>
-                        {projects.map(project => (
-                            <div key={project.id} style={{ background: 'white', borderRadius: '12px', padding: '1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', cursor: 'pointer' }}>
-                                <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: '#1f2937', marginBottom: '0.5rem' }}>{project.name}</h3>
-                                <p style={{ color: '#6b7280', fontSize: '0.85rem', marginBottom: '1rem', lineHeight: '1.4' }}>{project.description}</p>
-
-                                <div style={{ marginBottom: '0.5rem' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>
-                                        <span>Progress</span>
-                                        <span>{project.progress}%</span>
-                                    </div>
-                                    <div style={{ background: '#e5e7eb', borderRadius: '10px', height: '6px', overflow: 'hidden' }}>
-                                        <div style={{ width: `${project.progress}%`, height: '100%', background: 'linear-gradient(135deg, #667eea, #764ba2)', borderRadius: '10px' }}></div>
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#6b7280', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #f0f2f5' }}>
-                                    <span>📅 Due {new Date(project.dueDate).toLocaleDateString()}</span>
-                                    <span>✅ {project.tasks.completed}/{project.tasks.total} tasks</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Bottom Section */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '1.5rem' }}>
-                    {/* Recent Activity */}
-                    <div style={{ background: 'white', borderRadius: '12px', padding: '1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <h2 style={{ fontSize: '1.1rem', color: '#1f2937', marginBottom: '1rem' }}>🕐 Recent Activity</h2>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                            <div style={{ display: 'flex', gap: '10px', padding: '0.5rem', borderRadius: '8px' }}>
-                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, #667eea, #764ba2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.8rem', fontWeight: 'bold' }}>KR</div>
-                                <div><strong>Keiran Reyes</strong> completed task <strong>"Design Database Schema"</strong> <span style={{ color: '#667eea' }}>in E-Learning Platform</span><div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>2 hours ago</div></div>
-                            </div>
-                            <div style={{ display: 'flex', gap: '10px', padding: '0.5rem', borderRadius: '8px' }}>
-                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#48bb78', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.8rem', fontWeight: 'bold' }}>MJ</div>
-                                <div><strong>May Joy Agunod</strong> added new task <strong>"User Authentication"</strong> <span style={{ color: '#667eea' }}>in E-Learning Platform</span><div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>5 hours ago</div></div>
-                            </div>
-                            <div style={{ display: 'flex', gap: '10px', padding: '0.5rem', borderRadius: '8px' }}>
-                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.8rem', fontWeight: 'bold' }}>KD</div>
-                                <div><strong>Karylle Dampiles</strong> joined project <span style={{ color: '#667eea' }}>Mobile Weather App</span><div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>1 day ago</div></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Team Members */}
-                    <div style={{ background: 'white', borderRadius: '12px', padding: '1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <h2 style={{ fontSize: '1.1rem', color: '#1f2937', marginBottom: '1rem' }}>👥 Team Members</h2>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0.5rem', borderRadius: '8px' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#667eea', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>KR</div>
-                                <div style={{ flex: 1 }}><div style={{ fontWeight: '600' }}>Keiran Reyes</div><div style={{ fontSize: '0.7rem', color: '#6b7280' }}>Project Lead</div></div>
-                                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }}></div>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0.5rem', borderRadius: '8px' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#48bb78', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>MJ</div>
-                                <div style={{ flex: 1 }}><div style={{ fontWeight: '600' }}>May Joy Agunod</div><div style={{ fontSize: '0.7rem', color: '#6b7280' }}>Frontend Dev</div></div>
-                                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }}></div>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0.5rem', borderRadius: '8px' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>KD</div>
-                                <div style={{ flex: 1 }}><div style={{ fontWeight: '600' }}>Karylle Dampiles</div><div style={{ fontSize: '0.7rem', color: '#6b7280' }}>Backend Dev</div></div>
-                                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#9ca3af' }}></div>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0.5rem', borderRadius: '8px' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>MF</div>
-                                <div style={{ flex: 1 }}><div style={{ fontWeight: '600' }}>Merdy Francisco</div><div style={{ fontSize: '0.7rem', color: '#6b7280' }}>UI/UX Designer</div></div>
-                                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }}></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div style={{ marginBottom: "1.25rem" }}>
+              <label style={{
+                display: "block",
+                color: "white",
+                fontSize: "0.875rem",
+                marginBottom: "0.5rem",
+              }}>
+                Project Name <span style={{ color: "#ef4444" }}>required</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Website Redesign"
+                value={newProject.name}
+                onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                style={{
+                  width: "100%",
+                  padding: "0.75rem 1rem",
+                  background: "#1e293b",
+                  border: "1px solid #334155",
+                  borderRadius: "8px",
+                  color: "white",
+                  fontSize: "0.875rem",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
             </div>
 
-            {/* New Project Modal */}
-            {showNewProject && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setShowNewProject(false)}>
-                    <div style={{ background: 'white', borderRadius: '16px', padding: '1.5rem', width: '400px', maxWidth: '90%' }} onClick={(e) => e.stopPropagation()}>
-                        <h3 style={{ marginBottom: '1rem', color: '#1f2937' }}>Create New Project</h3>
-                        <input
-                            type="text"
-                            placeholder="Project Name"
-                            value={newProject.name}
-                            onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-                            style={{ width: '100%', padding: '0.6rem', marginBottom: '1rem', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '0.9rem' }}
-                        />
-                        <textarea
-                            placeholder="Description"
-                            rows="3"
-                            value={newProject.description}
-                            onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-                            style={{ width: '100%', padding: '0.6rem', marginBottom: '1rem', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '0.9rem', fontFamily: 'inherit' }}
-                        ></textarea>
-                        <div style={{ display: 'flex', gap: '1rem' }}>
-                            <button onClick={() => setShowNewProject(false)} style={{ flex: 1, padding: '0.5rem', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button>
-                            <button onClick={handleCreateProject} style={{ flex: 1, padding: '0.5rem', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Create</button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <div style={{ marginBottom: "1.25rem" }}>
+              <label style={{
+                display: "block",
+                color: "white",
+                fontSize: "0.875rem",
+                marginBottom: "0.5rem",
+              }}>
+                Description
+              </label>
+              <textarea
+                placeholder="Describe the project, goals, requirements..."
+                value={newProject.description}
+                onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
+                rows={3}
+                style={{
+                  width: "100%",
+                  padding: "0.75rem 1rem",
+                  background: "#1e293b",
+                  border: "1px solid #334155",
+                  borderRadius: "8px",
+                  color: "white",
+                  fontSize: "0.875rem",
+                  outline: "none",
+                  resize: "vertical",
+                  fontFamily: "inherit",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "1rem",
+              marginBottom: "1.5rem",
+            }}>
+              <div>
+                <label style={{
+                  display: "block",
+                  color: "white",
+                  fontSize: "0.875rem",
+                  marginBottom: "0.5rem",
+                }}>
+                  Goal Date
+                </label>
+                <input
+                  type="text"
+                  placeholder="MM / DD / YYYY"
+                  value={newProject.goalDate}
+                  onChange={(e) => setNewProject({ ...newProject, goalDate: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem 1rem",
+                    background: "#1e293b",
+                    border: "1px solid #334155",
+                    borderRadius: "8px",
+                    color: "white",
+                    fontSize: "0.875rem",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{
+                  display: "block",
+                  color: "white",
+                  fontSize: "0.875rem",
+                  marginBottom: "0.5rem",
+                }}>
+                  Goal Time
+                </label>
+                <input
+                  type="text"
+                  placeholder="HH : MM"
+                  value={newProject.goalTime}
+                  onChange={(e) => setNewProject({ ...newProject, goalTime: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem 1rem",
+                    background: "#1e293b",
+                    border: "1px solid #334155",
+                    borderRadius: "8px",
+                    color: "white",
+                    fontSize: "0.875rem",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{
+              display: "flex",
+              gap: "1rem",
+              justifyContent: "center",
+            }}>
+              <button
+                onClick={handleCreateProject}
+                style={{
+                  padding: "0.75rem 2rem",
+                  background: "#06b6d4",
+                  border: "none",
+                  borderRadius: "8px",
+                  color: "white",
+                  fontSize: "0.875rem",
+                  fontWeight: "500",
+                  cursor: "pointer",
+                  transition: "background 0.2s",
+                }}
+                onMouseOver={(e) => e.target.style.background = "#0891b2"}
+                onMouseOut={(e) => e.target.style.background = "#06b6d4"}
+              >
+                Create Project
+              </button>
+              <button
+                onClick={() => setShowModal(false)}
+                style={{
+                  padding: "0.75rem 2rem",
+                  background: "#475569",
+                  border: "none",
+                  borderRadius: "8px",
+                  color: "white",
+                  fontSize: "0.875rem",
+                  fontWeight: "500",
+                  cursor: "pointer",
+                  transition: "background 0.2s",
+                }}
+                onMouseOver={(e) => e.target.style.background = "#64748b"}
+                onMouseOut={(e) => e.target.style.background = "#475569"}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
-    );
+      )}
+    </div>
+  );
 }
 
 export default DashboardNew;
