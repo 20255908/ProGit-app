@@ -28,6 +28,8 @@ function Login({ onLogin, onSwitchToSignup }) {
 
     return (
         <div className="auth-container">
+            <div className="auth-float-circle circle-1"></div>
+            <div className="auth-float-circle circle-2"></div>
             <div className="auth-card">
                 <h1>ProGit</h1>
                 <h2>Sign In</h2>
@@ -104,6 +106,8 @@ function Signup({ onSwitchToLogin }) {
 
     return (
         <div className="auth-container">
+            <div className="auth-float-circle circle-1"></div>
+            <div className="auth-float-circle circle-2"></div>
             <div className="auth-card">
                 <h1>ProGit</h1>
                 <h2>Create Account</h2>
