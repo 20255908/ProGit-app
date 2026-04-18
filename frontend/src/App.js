@@ -159,11 +159,9 @@ function Dashboard({ user, onLogout }) {
                         <button className="logout-btn" onClick={onLogout}>Logout</button>
                     </div>
                 </div>
-
                 <div className="section-title">
                     <h2>My Projects</h2>
                 </div>
-
                 <div className="projects-grid">
                     {projects.map(project => (
                         <div key={project.id} className="project-card">
