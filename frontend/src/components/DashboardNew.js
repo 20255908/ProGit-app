@@ -1,15 +1,50 @@
 import React, { useState } from 'react';
+import './DashboardNew.css';
 
 function DashboardNew({ user, onLogout }) {
     const [projects, setProjects] = useState([
-        { id: 1, name: 'Website Redesign', description: 'Revamp the landing page UI and UX flows for Q3 launch.', progress: 65, dueDate: '2026-05-15', tasks: { completed: 8, total: 12 } },
-        { id: 2, name: 'API Integration', description: 'Connect payment gateway and third-party auth services.', progress: 40, dueDate: '2026-05-20', tasks: { completed: 4, total: 10 } },
+        { id: 1, name: 'Website Redesign', description: 'Redesign the landing page UI and UX flows for Q3 launch.', progress: 65, dueDate: '2026-05-15', tasks: { completed: 8, total: 12 } },
+        { id: 2, name: 'API Integration', description: 'Connect payment gateway and third-party API services.', progress: 40, dueDate: '2026-05-20', tasks: { completed: 4, total: 10 } },
         { id: 3, name: 'Mobile App', description: 'React Native app — sprint 2 in progress.', progress: 75, dueDate: '2026-05-10', tasks: { completed: 15, total: 20 } },
         { id: 4, name: 'Data Pipeline', description: 'ETL pipeline for analytics dashboard ingestion.', progress: 25, dueDate: '2026-05-30', tasks: { completed: 3, total: 12 } },
     ]);
 
     const [showNewProject, setShowNewProject] = useState(false);
     const [newProject, setNewProject] = useState({ name: '', description: '' });
+
+    // Get user initials
+    const getUserInitials = () => {
+        if (user?.fullName) {
+            const nameParts = user.fullName.split(' ');
+            if (nameParts.length >= 2) {
+                return (nameParts[0].charAt(0) + nameParts[1].charAt(0)).toUpperCase();
+            }
+            return user.fullName.substring(0, 2).toUpperCase();
+        }
+        if (user?.name) {
+            return user.name.substring(0, 2).toUpperCase();
+        }
+        if (user?.email) {
+            return user.email.substring(0, 2).toUpperCase();
+        }
+        return 'JD';
+    };
+
+    // Get display name
+    const getDisplayName = () => {
+        if (user?.fullName) return user.fullName;
+        if (user?.name) return user.name;
+        if (user?.email) return user.email.split('@')[0];
+        return 'User';
+    };
+
+    // Get first name for greeting
+    const getFirstName = () => {
+        if (user?.fullName) return user.fullName.split(' ')[0];
+        if (user?.name) return user.name.split(' ')[0];
+        if (user?.email) return user.email.split('@')[0];
+        return 'User';
+    };
 
     const handleCreateProject = () => {
         if (newProject.name) {
@@ -29,74 +64,89 @@ function DashboardNew({ user, onLogout }) {
     const totalTasks = projects.reduce((sum, p) => sum + p.tasks.completed, 0);
     const totalAllTasks = projects.reduce((sum, p) => sum + p.tasks.total, 0);
     const avgProgress = Math.round(projects.reduce((sum, p) => sum + p.progress, 0) / projects.length);
+    const initials = getUserInitials();
+    const displayName = getDisplayName();
+    const firstName = getFirstName();
 
     return (
-        <div style={{ minHeight: '100vh', background: '#f0f2f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
-            {/* Navbar */}
-            <nav style={{ background: 'white', padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '1.8rem' }}>🚀</span>
-                    <span style={{ fontSize: '1.3rem', fontWeight: 'bold', background: 'linear-gradient(135deg, #667eea, #764ba2)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>ProGit</span>
+        <div className="dashboard-new-container">
+            {/* Header */}
+            <div className="dashboard-new-header">
+                <div className="dashboard-new-logo">
+                    <span className="logo-icon">🚀</span>
+                    <span className="logo-text">ProGit</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <span style={{ color: '#374151' }}>Hello, {user?.name?.split(' ')[0] || 'User'}</span>
-                    <button onClick={onLogout} style={{ background: '#f56565', color: 'white', padding: '0.5rem 1rem', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Logout</button>
+                <div className="dashboard-new-user">
+                    <div className="user-avatar">{initials}</div>
+                    <div className="user-details">
+                        <span className="user-name">{displayName}</span>
+                        <span className="user-role">Product Studio</span>
+                    </div>
+                    <button className="logout-button" onClick={onLogout}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                            <polyline points="16 17 21 12 16 7" />
+                            <line x1="21" y1="12" x2="9" y2="12" />
+                        </svg>
+                        Logout
+                    </button>
                 </div>
-            </nav>
+            </div>
 
-            <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
+            <div className="dashboard-new-content">
                 {/* Welcome Section */}
-                <div style={{ marginBottom: '2rem' }}>
-                    <h1 style={{ fontSize: '1.8rem', color: '#1f2937', marginBottom: '0.25rem' }}>Welcome back, {user?.name?.split(' ')[0] || 'User'}! 👋</h1>
-                    <p style={{ color: '#6b7280' }}>Here's what's happening with your projects today.</p>
+                <div className="welcome-section">
+                    <h1>Dashboard</h1>
+                    <p>Welcome back, {firstName}. Here's what's happening with your projects.</p>
                 </div>
 
                 {/* Stats Cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
-                    <div style={{ background: 'white', padding: '1rem', borderRadius: '12px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#667eea' }}>{projects.length}</div>
-                        <div style={{ color: '#6b7280', fontSize: '0.85rem' }}>Active Projects</div>
+                <div className="stats-grid">
+                    <div className="stat-card">
+                        <div className="stat-value">{projects.length}</div>
+                        <div className="stat-label">Active Projects</div>
                     </div>
-                    <div style={{ background: 'white', padding: '1rem', borderRadius: '12px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#667eea' }}>{totalTasks}/{totalAllTasks}</div>
-                        <div style={{ color: '#6b7280', fontSize: '0.85rem' }}>Tasks Completed</div>
+                    <div className="stat-card">
+                        <div className="stat-value">{totalTasks}/{totalAllTasks}</div>
+                        <div className="stat-label">Tasks Completed</div>
                     </div>
-                    <div style={{ background: 'white', padding: '1rem', borderRadius: '12px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#667eea' }}>5</div>
-                        <div style={{ color: '#6b7280', fontSize: '0.85rem' }}>Team Members</div>
+                    <div className="stat-card">
+                        <div className="stat-value">5</div>
+                        <div className="stat-label">Team Members</div>
                     </div>
-                    <div style={{ background: 'white', padding: '1rem', borderRadius: '12px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#667eea' }}>{avgProgress}%</div>
-                        <div style={{ color: '#6b7280', fontSize: '0.85rem' }}>Avg Progress</div>
+                    <div className="stat-card">
+                        <div className="stat-value">{avgProgress}%</div>
+                        <div className="stat-label">Avg Progress</div>
                     </div>
                 </div>
 
                 {/* Projects Section */}
-                <div style={{ marginBottom: '2rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                        <h2 style={{ fontSize: '1.3rem', color: '#1f2937' }}>📁 My Projects</h2>
-                        <button onClick={() => setShowNewProject(true)} style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', padding: '0.5rem 1rem', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>+ New Project</button>
+                <div className="projects-section">
+                    <div className="projects-header">
+                        <h2>My Projects</h2>
+                        <button className="new-project-btn" onClick={() => setShowNewProject(true)}>+ New Project</button>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1rem' }}>
+                    <div className="projects-grid">
                         {projects.map(project => (
-                            <div key={project.id} style={{ background: 'white', borderRadius: '12px', padding: '1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', cursor: 'pointer' }}>
-                                <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: '#1f2937', marginBottom: '0.5rem' }}>{project.name}</h3>
-                                <p style={{ color: '#6b7280', fontSize: '0.85rem', marginBottom: '1rem', lineHeight: '1.4' }}>{project.description}</p>
-
-                                <div style={{ marginBottom: '0.5rem' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+                            <div key={project.id} className="project-card">
+                                <div className="project-title">
+                                    <h3>{project.name}</h3>
+                                    <span className="status-badge">Active</span>
+                                </div>
+                                <p className="project-description">{project.description}</p>
+                                <div className="progress-section">
+                                    <div className="progress-label">
                                         <span>Progress</span>
                                         <span>{project.progress}%</span>
                                     </div>
-                                    <div style={{ background: '#e5e7eb', borderRadius: '10px', height: '6px', overflow: 'hidden' }}>
-                                        <div style={{ width: `${project.progress}%`, height: '100%', background: 'linear-gradient(135deg, #667eea, #764ba2)', borderRadius: '10px' }}></div>
+                                    <div className="progress-bar">
+                                        <div className="progress-fill" style={{ width: `${project.progress}%` }}></div>
                                     </div>
                                 </div>
-
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#6b7280', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #f0f2f5' }}>
-                                    <span>📅 Due {new Date(project.dueDate).toLocaleDateString()}</span>
-                                    <span>✅ {project.tasks.completed}/{project.tasks.total} tasks</span>
+                                <div className="project-footer">
+                                    <span className="due-date">📅 Due {new Date(project.dueDate).toLocaleDateString()}</span>
+                                    <span className="task-count">✅ {project.tasks.completed}/{project.tasks.total} tasks</span>
                                 </div>
                             </div>
                         ))}
@@ -104,49 +154,70 @@ function DashboardNew({ user, onLogout }) {
                 </div>
 
                 {/* Bottom Section */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '1.5rem' }}>
+                <div className="bottom-section">
                     {/* Recent Activity */}
-                    <div style={{ background: 'white', borderRadius: '12px', padding: '1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <h2 style={{ fontSize: '1.1rem', color: '#1f2937', marginBottom: '1rem' }}>🕐 Recent Activity</h2>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                            <div style={{ display: 'flex', gap: '10px', padding: '0.5rem', borderRadius: '8px' }}>
-                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, #667eea, #764ba2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.8rem', fontWeight: 'bold' }}>KR</div>
-                                <div><strong>Keiran Reyes</strong> completed task <strong>"Design Database Schema"</strong> <span style={{ color: '#667eea' }}>in E-Learning Platform</span><div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>2 hours ago</div></div>
+                    <div className="activity-card">
+                        <h2>🕐 Recent Activity</h2>
+                        <div className="activity-list">
+                            <div className="activity-item">
+                                <div className="activity-avatar kr">KR</div>
+                                <div className="activity-content">
+                                    <strong>Keiran Reyes</strong> completed task <strong>"Design Database Schema"</strong> in <span className="project-name">E-Learning Platform</span>
+                                    <div className="activity-time">2 hours ago</div>
+                                </div>
                             </div>
-                            <div style={{ display: 'flex', gap: '10px', padding: '0.5rem', borderRadius: '8px' }}>
-                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#48bb78', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.8rem', fontWeight: 'bold' }}>MJ</div>
-                                <div><strong>May Joy Agunod</strong> added new task <strong>"User Authentication"</strong> <span style={{ color: '#667eea' }}>in E-Learning Platform</span><div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>5 hours ago</div></div>
+                            <div className="activity-item">
+                                <div className="activity-avatar mj">MJ</div>
+                                <div className="activity-content">
+                                    <strong>May Joy Agunod</strong> added new task <strong>"User Authentication"</strong> in <span className="project-name">E-Learning Platform</span>
+                                    <div className="activity-time">5 hours ago</div>
+                                </div>
                             </div>
-                            <div style={{ display: 'flex', gap: '10px', padding: '0.5rem', borderRadius: '8px' }}>
-                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.8rem', fontWeight: 'bold' }}>KD</div>
-                                <div><strong>Karylle Dampiles</strong> joined project <span style={{ color: '#667eea' }}>Mobile Weather App</span><div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>1 day ago</div></div>
+                            <div className="activity-item">
+                                <div className="activity-avatar kd">KD</div>
+                                <div className="activity-content">
+                                    <strong>Karylle Dampiles</strong> joined project <span className="project-name">Mobile Weather App</span>
+                                    <div className="activity-time">1 day ago</div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     {/* Team Members */}
-                    <div style={{ background: 'white', borderRadius: '12px', padding: '1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <h2 style={{ fontSize: '1.1rem', color: '#1f2937', marginBottom: '1rem' }}>👥 Team Members</h2>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0.5rem', borderRadius: '8px' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#667eea', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>KR</div>
-                                <div style={{ flex: 1 }}><div style={{ fontWeight: '600' }}>Keiran Reyes</div><div style={{ fontSize: '0.7rem', color: '#6b7280' }}>Project Lead</div></div>
-                                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }}></div>
+                    <div className="team-card">
+                        <h2>👥 Team Members</h2>
+                        <div className="team-list">
+                            <div className="team-member">
+                                <div className="member-avatar kr">KR</div>
+                                <div className="member-info">
+                                    <div className="member-name">Keiran Reyes</div>
+                                    <div className="member-role">Project Lead</div>
+                                </div>
+                                <div className="member-status online"></div>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0.5rem', borderRadius: '8px' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#48bb78', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>MJ</div>
-                                <div style={{ flex: 1 }}><div style={{ fontWeight: '600' }}>May Joy Agunod</div><div style={{ fontSize: '0.7rem', color: '#6b7280' }}>Frontend Dev</div></div>
-                                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }}></div>
+                            <div className="team-member">
+                                <div className="member-avatar mj">MJ</div>
+                                <div className="member-info">
+                                    <div className="member-name">May Joy Agunod</div>
+                                    <div className="member-role">Frontend Dev</div>
+                                </div>
+                                <div className="member-status online"></div>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0.5rem', borderRadius: '8px' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>KD</div>
-                                <div style={{ flex: 1 }}><div style={{ fontWeight: '600' }}>Karylle Dampiles</div><div style={{ fontSize: '0.7rem', color: '#6b7280' }}>Backend Dev</div></div>
-                                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#9ca3af' }}></div>
+                            <div className="team-member">
+                                <div className="member-avatar kd">KD</div>
+                                <div className="member-info">
+                                    <div className="member-name">Karylle Dampiles</div>
+                                    <div className="member-role">Backend Dev</div>
+                                </div>
+                                <div className="member-status offline"></div>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0.5rem', borderRadius: '8px' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>MF</div>
-                                <div style={{ flex: 1 }}><div style={{ fontWeight: '600' }}>Merdy Francisco</div><div style={{ fontSize: '0.7rem', color: '#6b7280' }}>UI/UX Designer</div></div>
-                                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }}></div>
+                            <div className="team-member">
+                                <div className="member-avatar mf">MF</div>
+                                <div className="member-info">
+                                    <div className="member-name">Merdy Francisco</div>
+                                    <div className="member-role">UI/UX Designer</div>
+                                </div>
+                                <div className="member-status online"></div>
                             </div>
                         </div>
                     </div>
@@ -155,26 +226,24 @@ function DashboardNew({ user, onLogout }) {
 
             {/* New Project Modal */}
             {showNewProject && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setShowNewProject(false)}>
-                    <div style={{ background: 'white', borderRadius: '16px', padding: '1.5rem', width: '400px', maxWidth: '90%' }} onClick={(e) => e.stopPropagation()}>
-                        <h3 style={{ marginBottom: '1rem', color: '#1f2937' }}>Create New Project</h3>
+                <div className="modal-overlay" onClick={() => setShowNewProject(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h3>Create New Project</h3>
                         <input
                             type="text"
                             placeholder="Project Name"
                             value={newProject.name}
                             onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-                            style={{ width: '100%', padding: '0.6rem', marginBottom: '1rem', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '0.9rem' }}
                         />
                         <textarea
                             placeholder="Description"
                             rows="3"
                             value={newProject.description}
                             onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-                            style={{ width: '100%', padding: '0.6rem', marginBottom: '1rem', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '0.9rem', fontFamily: 'inherit' }}
                         ></textarea>
-                        <div style={{ display: 'flex', gap: '1rem' }}>
-                            <button onClick={() => setShowNewProject(false)} style={{ flex: 1, padding: '0.5rem', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button>
-                            <button onClick={handleCreateProject} style={{ flex: 1, padding: '0.5rem', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Create</button>
+                        <div className="modal-buttons">
+                            <button className="cancel-btn" onClick={() => setShowNewProject(false)}>Cancel</button>
+                            <button className="create-btn" onClick={handleCreateProject}>Create</button>
                         </div>
                     </div>
                 </div>
