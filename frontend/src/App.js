@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import DashboardNew from './components/DashboardNew';
+import './App.css';
 
 function Login({ onLogin, onSwitchToSignup }) {
     const [email, setEmail] = useState('');
@@ -13,153 +13,36 @@ function Login({ onLogin, onSwitchToSignup }) {
         const user = users.find(u => u.email === email && u.password === password);
         
         if (user) {
-            const userData = { email: user.email, name: user.email.split('@')[0] };
+            const userData = { 
+                email: user.email, 
+                fullName: user.fullName 
+            };
             localStorage.setItem('currentUser', JSON.stringify(userData));
             onLogin(userData);
         } else {
-            setError('Invalid credentials. Please create an account first.');
+            setError('Invalid credentials');
         }
     };
 
     return (
-        <div style={{
-            minHeight: '100vh',
-            background: 'linear-gradient(135deg, #0a0f1e 0%, #0d1b2a 50%, #1a2a3a 100%)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            position: 'relative',
-            overflow: 'hidden'
-        }}>
-            <div style={{
-                position: 'absolute',
-                width: '300px',
-                height: '300px',
-                borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(74,144,226,0.2), transparent)',
-                top: '-100px',
-                left: '-100px',
-                animation: 'float 20s ease-in-out infinite'
-            }}></div>
-            <div style={{
-                position: 'absolute',
-                width: '200px',
-                height: '200px',
-                borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(74,144,226,0.15), transparent)',
-                bottom: '-50px',
-                right: '-50px',
-                animation: 'float 15s ease-in-out infinite reverse'
-            }}></div>
-
-            <style>{`
-                @keyframes float {
-                    0%, 100% { transform: translate(0, 0) scale(1); }
-                    50% { transform: translate(30px, -20px) scale(1.1); }
-                }
-            `}</style>
-
-            <div style={{
-                width: '520px',
-                height: '520px',
-                borderRadius: '50%',
-                background: 'radial-gradient(circle at 35% 30%, #4a90e2, #1e3a8a, #0f2b5c)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                boxShadow: '0 30px 60px rgba(0, 0, 0, 0.4)',
-                textAlign: 'center',
-                padding: '60px 50px',
-                position: 'relative',
-                zIndex: 1
-            }}>
-                <div style={{ fontSize: '52px', fontWeight: '800', color: 'white', marginBottom: '12px' }}>ProGit</div>
-                <div style={{ fontSize: '28px', fontWeight: '500', color: 'white', marginBottom: '35px' }}>Sign in</div>
-
-                {error && <div style={{ color: '#ff6b6b', marginBottom: '15px', fontSize: '14px' }}>{error}</div>}
-
-                <form onSubmit={handleSubmit} style={{ width: '100%' }}>
-                    <div style={{ width: '100%', marginBottom: '22px', textAlign: 'left' }}>
-                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'rgba(255,255,255,0.9)', marginBottom: '8px', textTransform: 'uppercase' }}>Email address</label>
-                        <input
-                            type="email"
-                            placeholder="Enter your email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            style={{
-                                width: '100%',
-                                padding: '14px 18px',
-                                fontSize: '15px',
-                                border: 'none',
-                                borderRadius: '12px',
-                                outline: 'none',
-                                backgroundColor: 'rgba(255,255,255,0.12)',
-                                color: 'white',
-                            }}
-                            required
-                        />
-                    </div>
-
-                    <div style={{ width: '100%', marginBottom: '22px', textAlign: 'left' }}>
-                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'rgba(255,255,255,0.9)', marginBottom: '8px', textTransform: 'uppercase' }}>Password</label>
-                        <input
-                            type="password"
-                            placeholder="Enter your password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            style={{
-                                width: '100%',
-                                padding: '14px 18px',
-                                fontSize: '15px',
-                                border: 'none',
-                                borderRadius: '12px',
-                                outline: 'none',
-                                backgroundColor: 'rgba(255,255,255,0.12)',
-                                color: 'white',
-                            }}
-                            required
-                        />
-                    </div>
-
-                    <button
-                        type="submit"
-                        style={{
-                            width: '100%',
-                            padding: '14px',
-                            background: 'white',
-                            color: '#1e3a8a',
-                            fontSize: '16px',
-                            fontWeight: '700',
-                            border: 'none',
-                            borderRadius: '12px',
-                            cursor: 'pointer',
-                            marginTop: '15px',
-                            textTransform: 'uppercase',
-                        }}
-                    >
-                        Sign in
-                    </button>
+        <div className="auth-container">
+            <div className="auth-card">
+                <h1>ProGit</h1>
+                <h2>Sign In</h2>
+                {error && <div className="error">{error}</div>}
+                <form onSubmit={handleSubmit}>
+                    <input type="email" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                    <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                    <button type="submit">Sign In</button>
                 </form>
-
-                <div style={{ textAlign: 'center', marginTop: '28px' }}>
-                    <a 
-                        href="#" 
-                        onClick={(e) => {
-                            e.preventDefault();
-                            onSwitchToSignup();
-                        }} 
-                        style={{ color: 'rgba(255,255,255,0.85)', textDecoration: 'none', fontSize: '13px', fontWeight: '500' }}
-                    >
-                        Create Account
-                    </a>
-                </div>
+                <p>Don't have an account? <a href="#" onClick={(e) => { e.preventDefault(); onSwitchToSignup(); }}>Create Account</a></p>
             </div>
         </div>
     );
 }
 
 function Signup({ onSwitchToLogin }) {
+    const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -171,7 +54,7 @@ function Signup({ onSwitchToLogin }) {
         setError('');
         setSuccess('');
 
-        if (!email || !password) {
+        if (!fullName || !email || !password) {
             setError('Please fill in all fields');
             return;
         }
@@ -190,174 +73,97 @@ function Signup({ onSwitchToLogin }) {
         
         const userExists = users.find(u => u.email === email);
         if (userExists) {
-            setError('User already exists. Please sign in.');
+            setError('User already exists');
             return;
         }
 
-        users.push({ email, password });
+        users.push({ fullName, email, password });
         localStorage.setItem('users', JSON.stringify(users));
         
-        setSuccess('Account created successfully! Redirecting to login...');
+        setSuccess('Account created! Redirecting...');
         setTimeout(() => {
             onSwitchToLogin();
         }, 2000);
     };
 
     return (
-        <div style={{
-            minHeight: '100vh',
-            background: 'linear-gradient(135deg, #0a0f1e 0%, #0d1b2a 50%, #1a2a3a 100%)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            position: 'relative',
-            overflow: 'hidden'
-        }}>
-            <div style={{
-                position: 'absolute',
-                width: '300px',
-                height: '300px',
-                borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(74,144,226,0.2), transparent)',
-                top: '-100px',
-                left: '-100px',
-                animation: 'float 20s ease-in-out infinite'
-            }}></div>
-            <div style={{
-                position: 'absolute',
-                width: '200px',
-                height: '200px',
-                borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(74,144,226,0.15), transparent)',
-                bottom: '-50px',
-                right: '-50px',
-                animation: 'float 15s ease-in-out infinite reverse'
-            }}></div>
-
-            <style>{`
-                @keyframes float {
-                    0%, 100% { transform: translate(0, 0) scale(1); }
-                    50% { transform: translate(30px, -20px) scale(1.1); }
-                }
-            `}</style>
-
-            <div style={{
-                width: '520px',
-                height: 'auto',
-                minHeight: '550px',
-                borderRadius: '50%',
-                background: 'radial-gradient(circle at 35% 30%, #4a90e2, #1e3a8a, #0f2b5c)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                boxShadow: '0 30px 60px rgba(0, 0, 0, 0.4)',
-                textAlign: 'center',
-                padding: '60px 50px',
-                position: 'relative',
-                zIndex: 1
-            }}>
-                <div style={{ fontSize: '52px', fontWeight: '800', color: 'white', marginBottom: '12px' }}>ProGit</div>
-                <div style={{ fontSize: '28px', fontWeight: '500', color: 'white', marginBottom: '35px' }}>Create Account</div>
-
-                {error && <div style={{ color: '#ff6b6b', marginBottom: '15px', fontSize: '14px' }}>{error}</div>}
-                {success && <div style={{ color: '#6bff6b', marginBottom: '15px', fontSize: '14px' }}>{success}</div>}
-
-                <form onSubmit={handleSubmit} style={{ width: '100%' }}>
-                    <div style={{ width: '100%', marginBottom: '22px', textAlign: 'left' }}>
-                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'rgba(255,255,255,0.9)', marginBottom: '8px', textTransform: 'uppercase' }}>Email address</label>
-                        <input
-                            type="email"
-                            placeholder="Enter your email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            style={{
-                                width: '100%',
-                                padding: '14px 18px',
-                                fontSize: '15px',
-                                border: 'none',
-                                borderRadius: '12px',
-                                outline: 'none',
-                                backgroundColor: 'rgba(255,255,255,0.12)',
-                                color: 'white',
-                            }}
-                            required
-                        />
-                    </div>
-
-                    <div style={{ width: '100%', marginBottom: '22px', textAlign: 'left' }}>
-                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'rgba(255,255,255,0.9)', marginBottom: '8px', textTransform: 'uppercase' }}>Password</label>
-                        <input
-                            type="password"
-                            placeholder="Create a password (min 6 characters)"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            style={{
-                                width: '100%',
-                                padding: '14px 18px',
-                                fontSize: '15px',
-                                border: 'none',
-                                borderRadius: '12px',
-                                outline: 'none',
-                                backgroundColor: 'rgba(255,255,255,0.12)',
-                                color: 'white',
-                            }}
-                            required
-                        />
-                    </div>
-
-                    <div style={{ width: '100%', marginBottom: '22px', textAlign: 'left' }}>
-                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: 'rgba(255,255,255,0.9)', marginBottom: '8px', textTransform: 'uppercase' }}>Confirm Password</label>
-                        <input
-                            type="password"
-                            placeholder="Confirm your password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            style={{
-                                width: '100%',
-                                padding: '14px 18px',
-                                fontSize: '15px',
-                                border: 'none',
-                                borderRadius: '12px',
-                                outline: 'none',
-                                backgroundColor: 'rgba(255,255,255,0.12)',
-                                color: 'white',
-                            }}
-                            required
-                        />
-                    </div>
-
-                    <button
-                        type="submit"
-                        style={{
-                            width: '100%',
-                            padding: '14px',
-                            background: 'white',
-                            color: '#1e3a8a',
-                            fontSize: '16px',
-                            fontWeight: '700',
-                            border: 'none',
-                            borderRadius: '12px',
-                            cursor: 'pointer',
-                            marginTop: '15px',
-                            textTransform: 'uppercase',
-                        }}
-                    >
-                        Create Account
-                    </button>
+        <div className="auth-container">
+            <div className="auth-card">
+                <h1>ProGit</h1>
+                <h2>Create Account</h2>
+                {error && <div className="error">{error}</div>}
+                {success && <div className="success">{success}</div>}
+                <form onSubmit={handleSubmit}>
+                    <input type="text" placeholder="Full Name" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+                    <input type="email" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                    <input type="password" placeholder="Password (min 6 characters)" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                    <input type="password" placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                    <button type="submit">Create Account</button>
                 </form>
+                <p>Already have an account? <a href="#" onClick={(e) => { e.preventDefault(); onSwitchToLogin(); }}>Sign In</a></p>
+            </div>
+        </div>
+    );
+}
 
-                <div style={{ textAlign: 'center', marginTop: '28px' }}>
-                    <a 
-                        href="#" 
-                        onClick={(e) => {
-                            e.preventDefault();
-                            onSwitchToLogin();
-                        }}
-                        style={{ color: 'rgba(255,255,255,0.85)', textDecoration: 'none', fontSize: '13px', fontWeight: '500' }}
-                    >
-                        Back to Sign In
-                    </a>
+function Dashboard({ user, onLogout }) {
+    const projects = [
+        { id: 1, name: 'Website Redesign', description: 'Redesign the landing page UI and UX flows for Q3 launch.' },
+        { id: 2, name: 'API Integration', description: 'Connect payment gateway and third-party API services.' },
+        { id: 3, name: 'Mobile App', description: 'React Native app — sprint 2 in progress.' },
+        { id: 4, name: 'Data Pipeline', description: 'ETL pipeline for analytics dashboard ingestion.' }
+    ];
+
+    const getUserInitials = () => {
+        if (user?.fullName) {
+            const parts = user.fullName.split(' ');
+            if (parts.length >= 2) {
+                return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+            }
+            return user.fullName.substring(0, 2).toUpperCase();
+        }
+        return 'JD';
+    };
+
+    const getFirstName = () => {
+        if (user?.fullName) return user.fullName.split(' ')[0];
+        return 'User';
+    };
+
+    return (
+        <div className="dashboard-container">
+            <div className="dashboard">
+                <div className="dashboard-header">
+                    <div className="greeting">
+                        <h1>Dashboard</h1>
+                        <p>Welcome back, {getFirstName()}. Here's what's happening with your projects.</p>
+                    </div>
+                    <div className="user-profile">
+                        <div className="avatar">{getUserInitials()}</div>
+                        <div className="user-info">
+                            <span>{user?.fullName || user?.email}</span>
+                            <small>Product Studio</small>
+                        </div>
+                        <button className="logout-btn" onClick={onLogout}>Logout</button>
+                    </div>
+                </div>
+                <div className="section-title">
+                    <h2>My Projects</h2>
+                </div>
+                <div className="projects-grid">
+                    {projects.map(project => (
+                        <div key={project.id} className="project-card">
+                            <div className="project-title">
+                                <h3>{project.name}</h3>
+                                <span className="status-badge">Active</span>
+                            </div>
+                            <p className="project-description">{project.description}</p>
+                            <div className="card-footer">
+                                <span className="active-tag">● Active</span>
+                                <a href="#" className="view-link">View →</a>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>
@@ -386,22 +192,8 @@ function App() {
         setUser(null);
     };
 
-    const handleNavigate = (page) => {
-        console.log('Navigate to:', page);
-    };
-
     if (loading) {
-        return (
-            <div style={{
-                minHeight: '100vh',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'linear-gradient(135deg, #0a0f1e, #0d1b2a)'
-            }}>
-                <div style={{ color: 'white', fontSize: '1.2rem' }}>Loading...</div>
-            </div>
-        );
+        return <div className="loading">Loading...</div>;
     }
 
     if (!user) {
@@ -411,7 +203,7 @@ function App() {
         return <Login onLogin={handleLogin} onSwitchToSignup={() => setShowSignup(true)} />;
     }
     
-    return <DashboardNew user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
+    return <Dashboard user={user} onLogout={handleLogout} />;
 }
 
 export default App;
