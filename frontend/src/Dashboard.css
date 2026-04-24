@@ -26,7 +26,7 @@ body {
 }
 
 .greeting p {
-  color: #5B6E8C;
+  color: #4A5568;
   margin-top: 6px;
 }
 
@@ -73,11 +73,11 @@ body {
 .section-title h2 {
   font-size: 1.6rem;
   font-weight: 700;
-  color: #1E3A4D;
+  color: #2563EB;;
 }
 
 .section-title a {
-  color: #2B6A9F;
+  color: #2563EB;
   text-decoration: none;
   font-size: 0.85rem;
 }
@@ -103,7 +103,7 @@ body {
 
 .project-title {
   display: flex;
-  justify-content: space-between'
+  justify-content: space-between;
   align-items: center;
   margin-bottom: 0.75rem;
 }
@@ -111,11 +111,11 @@ body {
 .project-title h3 {
   font-size: 1.2rem;
   font-weight: 700;
-  color: #1C3E54;
+  color: #1E293B;
 }
 
 .status-badge {
-  background: #e9F4EA;
+  background: #EFF6FF;
   color: #2E7D64;
   font-size: 0.7rem;
   font-weight: 700;
@@ -124,7 +124,7 @@ body {
 }
 
 .project-description {
-  color: #5F7A9A;
+  color: #64748B;
   font-size: 0.9rem;
   line-height: 1.45;
   margin: 0.6rem 0 1.2rem 0;
@@ -140,13 +140,13 @@ body {
 }
 
 .active-tag {
-  color: #1F6392;
+  color: #2563EB;
   font-size: 0.75rem;
   font-weight: 600;
 }
 
 .view-link {
-  color: #2B6A9F;
+  color: #2563EB;
   text-decoration: none;
   font-weight: 600;
   font-size: 0.85rem;
