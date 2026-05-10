@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 function DashboardNew({ user, onLogout }) {
   const [projects, setProjects] = useState([
@@ -9,6 +10,7 @@ function DashboardNew({ user, onLogout }) {
       goalDate: "2026-12-31",
       goalTime: "23:59",
       isCompleted: false,
+      isEnded: false,
       isStatic: true,
     },
     {
@@ -18,6 +20,7 @@ function DashboardNew({ user, onLogout }) {
       goalDate: "2026-11-15",
       goalTime: "18:00",
       isCompleted: false,
+      isEnded: false,
       isStatic: true,
     },
     {
@@ -27,6 +30,7 @@ function DashboardNew({ user, onLogout }) {
       goalDate: "2026-10-01",
       goalTime: "12:00",
       isCompleted: false,
+      isEnded: false,
       isStatic: true,
     },
     {
@@ -36,6 +40,7 @@ function DashboardNew({ user, onLogout }) {
       goalDate: "2026-09-20",
       goalTime: "09:00",
       isCompleted: false,
+      isEnded: false,
       isStatic: true,
     },
   ]);
@@ -53,6 +58,7 @@ function DashboardNew({ user, onLogout }) {
   const [showModal, setShowModal] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState({});
+  const [dateError, setDateError] = useState("");
   const [newProject, setNewProject] = useState({
     name: "",
     description: "",
@@ -60,42 +66,289 @@ function DashboardNew({ user, onLogout }) {
     goalTime: "",
   });
 
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmType, setConfirmType] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+
+  // STATUS PRIORITY
+  const statusPriority = {
+    ongoing: 1,
+    ended: 2,
+    finished: 3,
+    disregarded: 4,
+  };
+
+  const getStatusFromProject = (project) => {
+    if (project.status) return project.status;
+    if (project.isDisregarded) return "disregarded";
+    if (project.isCompleted) return "finished";
+    if (project.isEnded) return "ended";
+    return "ongoing";
+  };
+
+  // VALIDATION FUNCTION - checks if selected date/time is in the past
+  const isDateInPast = (date, time) => {
+    if (!date) return false;
+    const deadline = new Date(`${date} ${time || "23:59"}`);
+    const now = new Date();
+    return deadline <= now;
+  };
+
+  // Get deadline date object safely
+  const getDeadlineDate = (goalDate, goalTime) => {
+    if (!goalDate) return null;
+    return new Date(`${goalDate} ${goalTime || "23:59"}`);
+  };
+
+  const checkIfEnded = useCallback((project) => {
+    if (project.isCompleted) return false;
+    if (!project.goalDate) return false;
+    
+    const deadline = getDeadlineDate(project.goalDate, project.goalTime);
+    if (!deadline) return false;
+    
+    const now = new Date();
+    return deadline <= now;
+  }, []);
+
+  const updateEndedStatus = useCallback(() => {
+    setProjects(prevProjects => {
+      const updated = prevProjects.map(p => ({
+        ...p,
+        isEnded: checkIfEnded(p)
+      }));
+      return [...updated].sort((a, b) => {
+        const statusA = getStatusFromProject(a);
+        const statusB = getStatusFromProject(b);
+        return statusPriority[statusA] - statusPriority[statusB];
+      });
+    });
+  }, [checkIfEnded]);
+
+  // Countdown logic with safety - prevents negative values
+  const getCountdown = (goalDate, goalTime, isCompleted, isEnded) => {
+    if (isCompleted) return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true, display: "Project Finished" };
+    if (isEnded) return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true, display: "Project Ended" };
+    if (!goalDate) return null;
+    
+    const deadline = getDeadlineDate(goalDate, goalTime);
+    if (!deadline) return null;
+    
+    const now = new Date();
+    const diff = deadline - now;
+    
+    // If deadline has passed, mark as ended
+    if (diff <= 0) {
+      return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true, display: "Project Ended" };
+    }
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    const minutes = Math.floor((diff / (1000 * 60)) % 60);
+    const seconds = Math.floor((diff / 1000) % 60);
+    
+    return { days, hours, minutes, seconds, isExpired: false, display: `${days}d ${hours}h ${minutes}m ${seconds}s` };
+  };
+
+  useEffect(() => {
+    if (!selectedProject) return;
+
+    // Countdown interval for preview page
+    const countdownInterval = setInterval(() => {
+      const currentProject = projects.find(p => p.id === selectedProject.id);
+      if (currentProject) {
+        const countdown = getCountdown(
+          currentProject.goalDate, 
+          currentProject.goalTime, 
+          currentProject.isCompleted, 
+          currentProject.isEnded
+        );
+        
+        // Auto-mark as ended when countdown reaches zero
+        if (countdown && countdown.isExpired && !currentProject.isCompleted && !currentProject.isEnded && !showConfirmModal && !isProcessing) {
+          setConfirmType('end');
+          setShowConfirmModal(true);
+        }
+      }
+    }, 1000);
+
+    return () => clearInterval(countdownInterval);
+  }, [selectedProject, projects, showConfirmModal, isProcessing]);
+
+  useEffect(() => {
+    updateEndedStatus();
+    const interval = setInterval(updateEndedStatus, 1000);
+    return () => clearInterval(interval);
+  }, [updateEndedStatus]);
+
   const handleCreateProject = () => {
-    if (!newProject.name.trim()) return;
+    // Clear previous error
+    setDateError("");
+    
+    // VALIDATION: Check if date is in the past
+    if (newProject.goalDate) {
+      const isPast = isDateInPast(newProject.goalDate, newProject.goalTime);
+      if (isPast) {
+        setDateError("Project deadline cannot be in the past. Please select a valid future date and time.");
+        return;
+      }
+    }
+    
+    if (!newProject.name.trim()) {
+      setDateError("Project name is required.");
+      return;
+    }
 
     setProjects([
       ...projects,
       {
-        id: projects.length + 1,
+        id: Date.now(),
         name: newProject.name,
         description: newProject.description || "No description provided",
         goalDate: newProject.goalDate,
         goalTime: newProject.goalTime,
         isCompleted: false,
+        isEnded: false,
         isStatic: false,
       },
-    ]);
+    ].sort((a, b) => {
+      const statusA = getStatusFromProject(a);
+      const statusB = getStatusFromProject(b);
+      return statusPriority[statusA] - statusPriority[statusB];
+    }));
 
     setNewProject({ name: "", description: "", goalDate: "", goalTime: "" });
+    setDateError("");
     setShowModal(false);
   };
 
-  const handleCompleteGoal = (projectId) => {
-    setProjects(projects.map(p => 
-      p.id === projectId ? { ...p, isCompleted: true } : p
-    ));
-    if (selectedProject && selectedProject.id === projectId) {
-      setSelectedProject({ ...selectedProject, isCompleted: true });
+  const handleDateChange = (e) => {
+    const newDate = e.target.value;
+    setNewProject({ ...newProject, goalDate: newDate });
+    setDateError("");
+    
+    // Real-time validation
+    if (newDate && newProject.goalTime) {
+      if (isDateInPast(newDate, newProject.goalTime)) {
+        setDateError("Project deadline cannot be in the past.");
+      }
     }
   };
 
-  const handleCancelGoal = (projectId) => {
-    setProjects(projects.map(p => 
-      p.id === projectId ? { ...p, goalDate: "", goalTime: "", isCompleted: false } : p
-    ));
-    if (selectedProject && selectedProject.id === projectId) {
-      setSelectedProject({ ...selectedProject, goalDate: "", goalTime: "", isCompleted: false });
+  const handleTimeChange = (e) => {
+    const newTime = e.target.value;
+    setNewProject({ ...newProject, goalTime: newTime });
+    setDateError("");
+    
+    // Real-time validation
+    if (newProject.goalDate && newTime) {
+      if (isDateInPast(newProject.goalDate, newTime)) {
+        setDateError("Project deadline cannot be in the past.");
+      }
     }
+  };
+
+  const handleFinishClick = () => {
+    setConfirmType('finish');
+    setShowConfirmModal(true);
+  };
+
+  const handleEndClick = () => {
+    setConfirmType('end');
+    setShowConfirmModal(true);
+  };
+
+  const handleDeleteClick = () => {
+    setConfirmType('delete');
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmAction = () => {
+    setIsProcessing(true);
+    
+    if (confirmType === 'finish') {
+      setProjects(prevProjects => {
+        const updatedProjects = prevProjects.map(p => 
+          p.id === selectedProject?.id ? { ...p, isCompleted: true, isEnded: false } : p
+        );
+        return [...updatedProjects].sort((a, b) => {
+          const statusA = getStatusFromProject(a);
+          const statusB = getStatusFromProject(b);
+          return statusPriority[statusA] - statusPriority[statusB];
+        });
+      });
+      setSuccessMessage("✓ Project Finished! Returning to dashboard...");
+      setShowSuccessToast(true);
+      
+      setTimeout(() => {
+        setShowConfirmModal(false);
+        setConfirmType(null);
+        setIsProcessing(false);
+        setSelectedProject(null);
+        setShowSuccessToast(false);
+      }, 1500);
+      
+    } else if (confirmType === 'end') {
+      setProjects(prevProjects => {
+        const updatedProjects = prevProjects.map(p => 
+          p.id === selectedProject?.id ? { ...p, isEnded: true, isCompleted: false } : p
+        );
+        return [...updatedProjects].sort((a, b) => {
+          const statusA = getStatusFromProject(a);
+          const statusB = getStatusFromProject(b);
+          return statusPriority[statusA] - statusPriority[statusB];
+        });
+      });
+      setSuccessMessage("⚠️ Project Ended! Returning to dashboard...");
+      setShowSuccessToast(true);
+      
+      setTimeout(() => {
+        setShowConfirmModal(false);
+        setConfirmType(null);
+        setIsProcessing(false);
+        setSelectedProject(null);
+        setShowSuccessToast(false);
+      }, 1500);
+      
+    } else if (confirmType === 'delete') {
+      const projectIdToDelete = selectedProject?.id;
+      
+      setProjects(prevProjects => {
+        const filteredProjects = prevProjects.filter(p => p.id !== projectIdToDelete);
+        return [...filteredProjects].sort((a, b) => {
+          const statusA = getStatusFromProject(a);
+          const statusB = getStatusFromProject(b);
+          return statusPriority[statusA] - statusPriority[statusB];
+        });
+      });
+      
+      if (projectIdToDelete) {
+        setProjectFiles(prev => {
+          const newFiles = { ...prev };
+          delete newFiles[projectIdToDelete];
+          return newFiles;
+        });
+      }
+      
+      setSuccessMessage("🗑️ Project Deleted! Returning to dashboard...");
+      setShowSuccessToast(true);
+      
+      setTimeout(() => {
+        setShowConfirmModal(false);
+        setConfirmType(null);
+        setIsProcessing(false);
+        setSelectedProject(null);
+        setShowSuccessToast(false);
+      }, 1500);
+    }
+  };
+
+  const handleCancelAction = () => {
+    setShowConfirmModal(false);
+    setConfirmType(null);
+    setIsProcessing(false);
   };
 
   const generateFileId = (file) => {
@@ -199,616 +452,516 @@ function DashboardNew({ user, onLogout }) {
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
+  const getStatusInfo = (project) => {
+    if (project.isCompleted) {
+      return { text: "Finished", color: "#9CA3AF", bg: "#F3F4F6", borderColor: "#9CA3AF", badgeColor: "#9CA3AF" };
+    }
+    if (project.isEnded) {
+      return { text: "Ended", color: "#EF4444", bg: "#FEF2F2", borderColor: "#EF4444", badgeColor: "#EF4444" };
+    }
+    return { text: "Ongoing", color: "#22C55E", bg: "#FFFFFF", borderColor: "#22C55E", badgeColor: "#22C55E" };
+  };
+
+  const sortedProjects = [...projects].sort((a, b) => {
+    const statusA = getStatusFromProject(a);
+    const statusB = getStatusFromProject(b);
+    return statusPriority[statusA] - statusPriority[statusB];
+  });
+
+  const gradientBg = {
+    background: "linear-gradient(135deg, #1E3A4D 0%, #2B6A9F 100%)",
+  };
+
+  const primaryGradient = {
+    background: "linear-gradient(145deg, #2B6A9F, #1E4A6E)",
+  };
+
   if (selectedProject) {
-    const deadline = new Date(
-      `${selectedProject.goalDate || "2026-12-31"} ${selectedProject.goalTime || "23:59"}`
+    const countdown = getCountdown(
+      selectedProject.goalDate, 
+      selectedProject.goalTime, 
+      selectedProject.isCompleted, 
+      selectedProject.isEnded
     );
-    const now = new Date();
-    const diff = deadline - now;
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-    const minutes = Math.floor((diff / (1000 * 60)) % 60);
     const projectFileList = projectFiles[selectedProject.id] || [];
     const isCompleted = selectedProject.isCompleted;
+    const isEnded = selectedProject.isEnded;
     const showTeamMembers = selectedProject.isStatic === true;
 
     return (
-      <div style={{ padding: "2rem", color: "white", background: "#020617", minHeight: "100vh" }}>
-        <button
-          onClick={() => setSelectedProject(null)}
-          style={{
-            marginBottom: "1rem",
-            background: "#475569",
-            border: "none",
-            padding: "6px 12px",
-            borderRadius: "6px",
-            color: "white",
-            cursor: "pointer",
-          }}
-        >
-          ← Back to Dashboard
-        </button>
-
-        <nav
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "1rem 0",
-            marginBottom: "1.5rem",
-            borderBottom: "1px solid #1e293b",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ fontSize: "1.2rem", color: "#22d3ee" }}>ProGit</span>
-            <span style={{ color: "#64748b" }}>/</span>
-            <span style={{ color: "#64748b" }}>Projects</span>
-            <span style={{ color: "#64748b" }}>/</span>
-            <span>{selectedProject.name}</span>
-            <span style={{ color: "#64748b" }}>/</span>
-            <span style={{ color: "#22d3ee" }}>Files</span>
+      <div className="min-vh-100 p-4" style={gradientBg}>
+        {showSuccessToast && (
+          <div style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            background: isProcessing ? '#22C55E' : (confirmType === 'end' ? '#EF4444' : '#9CA3AF'),
+            color: 'white',
+            padding: '12px 24px',
+            borderRadius: '12px',
+            zIndex: 3000,
+            animation: 'slideIn 0.3s ease',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+          }}>
+            {successMessage}
           </div>
+        )}
 
-          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-            <span style={{ color: "#64748b", cursor: "pointer" }}>Dashboard</span>
-            <span style={{ color: "#64748b", cursor: "pointer" }}>Projects</span>
-            <div
-              style={{
-                background: "#0891b2",
-                width: "32px",
-                height: "32px",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontWeight: "bold",
-              }}
-            >
-              {user?.name?.[0] || "U"}
+        <div className="container">
+          <button 
+            className="btn btn-secondary mb-3" 
+            onClick={() => setSelectedProject(null)}
+          >
+            ← Back to Dashboard
+          </button>
+
+          <div className="card shadow-lg border-0 rounded-4">
+            <div className="card-body p-4">
+              <div className="d-flex justify-content-between align-items-center pb-3 border-bottom">
+                <div>
+                  <h1 className="h2 mb-1" style={{ color: "#1E3A4D" }}>{selectedProject.name}</h1>
+                  <p className="text-muted mb-0">{selectedProject.description}</p>
+                </div>
+                <div className="d-flex align-items-center gap-3">
+                  <div className="d-flex align-items-center gap-2 bg-light rounded-5 px-3 py-2">
+                    <div className="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white fw-bold" style={{ width: "42px", height: "42px" }}>
+                      {user?.name?.[0] || "U"}
+                    </div>
+                    <div>
+                      <div className="fw-bold" style={{ color: "#1F3B4C" }}>{user?.name || "john_doe"}</div>
+                      <small className="text-muted">Product Studio</small>
+                    </div>
+                  </div>
+                  <button className="btn btn-danger" onClick={onLogout}>Logout</button>
+                </div>
+              </div>
+
+              <div className="row mt-4">
+                <div className="col-md-8">
+                  {selectedProject.goalDate && !isCompleted && !isEnded && countdown && !countdown.isExpired && (
+                    <div className="bg-light rounded-4 p-3 mb-4 border-start border-4" style={{ borderLeftColor: "#2B6A9F" }}>
+                      <div className="fw-bold" style={{ color: "#2B6A9F" }}>
+                        Goal: {formatDate(selectedProject.goalDate)} at {selectedProject.goalTime}
+                      </div>
+                      <div className="h4 fw-bold my-2" style={{ color: "#1E3A4D" }}>
+                        Countdown: {countdown.days}d {countdown.hours}h {countdown.minutes}m {countdown.seconds}s
+                      </div>
+                      <div className="d-flex gap-2 flex-wrap">
+                        <button className="btn btn-success" onClick={handleFinishClick} disabled={isProcessing}>
+                          ✓ Already Finished
+                        </button>
+                        <button className="btn btn-warning" onClick={handleEndClick} disabled={isProcessing}>
+                          ⚠️ End Project
+                        </button>
+                        <button className="btn btn-danger" onClick={handleDeleteClick} disabled={isProcessing}>
+                          🗑️ Delete Project
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedProject.goalDate && (isEnded || (countdown && countdown.isExpired)) && (
+                    <div className="bg-danger bg-opacity-10 rounded-4 p-3 mb-4 border-start border-4" style={{ borderLeftColor: "#EF4444" }}>
+                      <div className="fw-bold text-danger">⚠️ Project Has Ended!</div>
+                      <div className="small text-muted mt-1">
+                        Goal was set for {formatDate(selectedProject.goalDate)} at {selectedProject.goalTime}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedProject.goalDate && isCompleted && (
+                    <div className="bg-success bg-opacity-10 rounded-4 p-3 mb-4 border-start border-4" style={{ borderLeftColor: "#9CA3AF" }}>
+                      <div className="fw-bold text-secondary">✓ Project Finished!</div>
+                      <div className="small text-muted mt-1">
+                        Original goal was set for {formatDate(selectedProject.goalDate)} at {selectedProject.goalTime}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="card border-0 shadow-sm rounded-4 mb-4">
+                    <div className="card-body">
+                      <h5 className="card-title" style={{ color: "#1E3A4D" }}>File Upload</h5>
+                      <p className="text-muted small">Attach files to this project. Supported: PDF, PNG, JPG, ZIP, DOCX, and more.</p>
+
+                      <div
+                        onDragEnter={handleDrag}
+                        onDragLeave={handleDrag}
+                        onDragOver={handleDrag}
+                        onDrop={handleDrop}
+                        className={`border-2 border-dashed rounded-4 p-5 text-center ${dragActive ? 'border-primary bg-light' : 'border-secondary'}`}
+                        style={{ cursor: "pointer", transition: "all 0.2s ease" }}
+                      >
+                        <div className="display-1 mb-2">📁</div>
+                        <p className="text-muted mb-1">Drag & drop files here</p>
+                        <p className="text-muted small mb-3">or</p>
+                        <input
+                          type="file"
+                          multiple
+                          id="file-upload-input"
+                          className="d-none"
+                          onChange={handleBrowseFiles}
+                        />
+                        <label htmlFor="file-upload-input" className="btn text-white px-4 py-2 rounded-3" style={primaryGradient}>
+                          Browse Files
+                        </label>
+                      </div>
+
+                      <div className="mt-4">
+                        <h6 className="fw-bold" style={{ color: "#1F3B4C" }}>Uploaded Files</h6>
+                        <div className="table-responsive">
+                          <table className="table table-hover">
+                            <thead className="text-muted small">
+                              <tr>
+                                <th>File</th>
+                                <th>Size</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {projectFileList.length === 0 ? (
+                                <tr>
+                                  <td colSpan="4" className="text-center text-muted py-4">No files uploaded yet</td>
+                                </tr>
+                              ) : (
+                                projectFileList.map((file) => (
+                                  <tr key={file.id}>
+                                    <td>
+                                      <span className="me-2">{getFileIcon(file.name)}</span>
+                                      <span className="text-muted small me-1">{getFileExtension(file.name)}</span>
+                                      <span className="ms-1">{file.name}</span>
+                                    </td>
+                                    <td className="text-muted small">{formatFileSize(file.size)}</td>
+                                    <td>
+                                      <span className={uploadingFiles[file.id] === "uploading" ? "text-warning" : "text-success"}>
+                                        {uploadingFiles[file.id] === "uploading" ? "Uploading..." : "Complete"}
+                                      </span>
+                                    </td>
+                                    <td>
+                                      <button className="btn btn-sm btn-link text-danger" onClick={(e) => handleRemoveFile(selectedProject.id, file.id, e)}>
+                                        Remove
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="col-md-4">
+                  <div className="card border-0 shadow-sm rounded-4">
+                    <div className="card-body">
+                      <h5 className="card-title fw-bold" style={{ color: "#1E3A4D" }}>Team Members</h5>
+                      {showTeamMembers ? (
+                        staticTeamMembers.map((m, i) => (
+                          <div key={i} className="d-flex align-items-center gap-3 mt-3">
+                            <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style={{ width: "40px", height: "40px", background: m.color }}>
+                              {m.name.split(" ").map(n => n[0]).join("")}
+                            </div>
+                            <div className="fw-medium" style={{ color: "#1F3B4C" }}>{m.name}</div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center text-muted py-4">No team members assigned yet</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <span>{user?.name || "john_doe"}</span>
-            <button
-              onClick={onLogout}
-              style={{
-                background: "#ef4444",
-                border: "none",
-                padding: "6px 12px",
-                borderRadius: "6px",
-                color: "white",
-                cursor: "pointer",
-              }}
-            >
-              Logout
-            </button>
           </div>
-        </nav>
+        </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "2rem" }}>
-          <div>
-            <div style={{ marginBottom: "2rem" }}>
-              <h1 style={{ fontSize: "1.8rem", marginBottom: "0.5rem" }}>{selectedProject.name}</h1>
-              <p style={{ color: "#64748b" }}>{selectedProject.description}</p>
-            </div>
-
-            {selectedProject.goalDate && !isCompleted && (
-              <div style={{ marginBottom: "2rem", padding: "1rem", background: "#0f172a", borderRadius: "10px", borderLeft: "3px solid #06b6d4" }}>
-                <div style={{ fontSize: "1rem", color: "#22d3ee", marginBottom: "0.5rem" }}>
-                  Goal: {formatDate(selectedProject.goalDate)} at {selectedProject.goalTime}
-                </div>
-                <div style={{ fontSize: "1.2rem", color: "#22d3ee", marginBottom: "1rem" }}>
-                  Countdown: {days}d {hours}h {minutes}m
-                </div>
-                <div style={{ display: "flex", gap: "1rem" }}>
-                  <button
-                    onClick={() => handleCompleteGoal(selectedProject.id)}
-                    style={{
-                      background: "#22c55e",
-                      border: "none",
-                      padding: "6px 12px",
-                      borderRadius: "6px",
-                      color: "white",
-                      cursor: "pointer",
-                    }}
-                  >
-                    ✓ Already Finished
-                  </button>
-                  <button
-                    onClick={() => handleCancelGoal(selectedProject.id)}
-                    style={{
-                      background: "#ef4444",
-                      border: "none",
-                      padding: "6px 12px",
-                      borderRadius: "6px",
-                      color: "white",
-                      cursor: "pointer",
-                    }}
-                  >
-                    ✗ Cancel Goal
-                  </button>
-                </div>
+        {/* CONFIRMATION MODAL */}
+        {showConfirmModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000,
+            animation: 'fadeIn 0.2s ease'
+          }} onClick={handleCancelAction}>
+            <div style={{
+              background: 'white',
+              borderRadius: '24px',
+              padding: '2rem',
+              maxWidth: '450px',
+              width: '90%',
+              textAlign: 'center',
+              animation: 'scaleIn 0.2s ease',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)'
+            }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
+                {confirmType === 'finish' ? '✓' : (confirmType === 'delete' ? '🗑️' : '⚠️')}
               </div>
-            )}
-
-            {selectedProject.goalDate && isCompleted && (
-              <div style={{ marginBottom: "2rem", padding: "1rem", background: "#0f172a", borderRadius: "10px", borderLeft: "3px solid #22c55e" }}>
-                <div style={{ fontSize: "1rem", color: "#22c55e" }}>
-                  ✓ Goal Completed! Great job!
-                </div>
-                <div style={{ fontSize: "0.875rem", color: "#64748b", marginTop: "0.5rem" }}>
-                  Original goal was set for {formatDate(selectedProject.goalDate)} at {selectedProject.goalTime}
-                </div>
-              </div>
-            )}
-
-            <div style={{ 
-              background: "#0f172a", 
-              borderRadius: "12px", 
-              border: "1px solid #1e293b",
-              marginBottom: "2rem"
-            }}>
-              <div style={{ padding: "1.5rem", borderBottom: "1px solid #1e293b" }}>
-                <h2 style={{ fontSize: "1.2rem", marginBottom: "0.25rem" }}>File Upload</h2>
-                <p style={{ color: "#64748b", fontSize: "0.875rem" }}>
-                  Attach files to this project. Supported: PDF, PNG, JPG, ZIP, DOCX, and more.
-                </p>
-              </div>
-
-              <div
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
-                style={{
-                  margin: "1.5rem",
-                  padding: "2rem",
-                  border: `2px dashed ${dragActive ? "#06b6d4" : "#334155"}`,
-                  borderRadius: "12px",
-                  background: dragActive ? "#1e293b" : "#020617",
-                  textAlign: "center",
-                  transition: "all 0.2s ease",
-                }}
-              >
-                <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📁</div>
-                <p style={{ color: "#94a3b8", marginBottom: "0.5rem" }}>Drag & drop files here</p>
-                <p style={{ color: "#64748b", fontSize: "0.875rem", marginBottom: "1rem" }}>or</p>
-                <input
-                  type="file"
-                  multiple
-                  id="file-upload-input"
-                  style={{ display: "none" }}
-                  onChange={handleBrowseFiles}
-                />
-                <label
-                  htmlFor="file-upload-input"
+              <h3 style={{ color: '#1E3A4D', marginBottom: '0.75rem' }}>
+                {confirmType === 'finish' ? 'Finish This Project?' : 
+                 (confirmType === 'delete' ? 'Delete This Project?' : 'End This Project?')}
+              </h3>
+              <p style={{ color: '#5B6E8C', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+                {confirmType === 'finish' 
+                  ? 'Are you sure you want to finish this project? It will be marked as completed and moved to the finished section.'
+                  : (confirmType === 'delete'
+                    ? 'Are you sure you want to delete this project? All files and data will be permanently removed. This action cannot be undone.'
+                    : 'Are you sure you want to end this project? The deadline has passed and this action cannot be undone.')}
+              </p>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                <button 
+                  onClick={handleConfirmAction}
+                  disabled={isProcessing}
                   style={{
-                    display: "inline-block",
-                    background: "#06b6d4",
-                    color: "#022c22",
-                    padding: "8px 16px",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                    fontWeight: "500",
-                    fontSize: "0.875rem",
+                    background: confirmType === 'finish' ? '#22C55E' : '#EF4444',
+                    color: 'white',
+                    border: 'none',
+                    padding: '10px 24px',
+                    borderRadius: '12px',
+                    fontWeight: '600',
+                    cursor: isProcessing ? 'not-allowed' : 'pointer',
+                    opacity: isProcessing ? 0.6 : 1,
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isProcessing) {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.filter = 'brightness(1.05)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.filter = 'brightness(1)';
                   }}
                 >
-                  Browse Files
-                </label>
-                <p style={{ color: "#64748b", fontSize: "0.75rem", marginTop: "0.75rem" }}>
-                  Max file size: 50 MB per file
-                </p>
-              </div>
-
-              <div style={{ padding: "0 1.5rem 1.5rem 1.5rem" }}>
-                <h3 style={{ fontSize: "1rem", marginBottom: "1rem", color: "#94a3b8" }}>Uploaded Files</h3>
-                
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr style={{ borderBottom: "1px solid #1e293b", color: "#64748b", fontSize: "0.875rem" }}>
-                        <th style={{ textAlign: "left", padding: "0.75rem 0.5rem" }}>File</th>
-                        <th style={{ textAlign: "left", padding: "0.75rem 0.5rem" }}>Size</th>
-                        <th style={{ textAlign: "left", padding: "0.75rem 0.5rem" }}>Status</th>
-                        <th style={{ textAlign: "left", padding: "0.75rem 0.5rem" }}>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {projectFileList.length === 0 ? (
-                        <td>
-                          <td colSpan="4" style={{ textAlign: "center", padding: "2rem", color: "#64748b" }}>
-                            No files uploaded yet
-                          </td>
-                        </td>
-                      ) : (
-                        projectFileList.map((file) => (
-                          <tr key={file.id} style={{ borderBottom: "1px solid #1e293b" }}>
-                            <td style={{ padding: "0.75rem 0.5rem" }}>
-                              <span style={{ marginRight: "8px" }}>{getFileIcon(file.name)}</span>
-                              <span style={{ fontSize: "0.875rem", marginLeft: "4px" }}>{getFileExtension(file.name)}</span>
-                              <span style={{ color: "#94a3b8", marginLeft: "8px", fontSize: "0.875rem" }}>{file.name}</span>
-                            </td>
-                            <td style={{ padding: "0.75rem 0.5rem", color: "#64748b", fontSize: "0.875rem" }}>
-                              {formatFileSize(file.size)}
-                            </td>
-                            <td style={{ padding: "0.75rem 0.5rem" }}>
-                              <span style={{
-                                color: uploadingFiles[file.id] === "uploading" ? "#f59e0b" : "#22c55e",
-                                fontSize: "0.875rem"
-                              }}>
-                                {uploadingFiles[file.id] === "uploading" ? "Uploading..." : "Complete"}
-                              </span>
-                            </td>
-                            <td style={{ padding: "0.75rem 0.5rem" }}>
-                              <button
-                                onClick={(e) => handleRemoveFile(selectedProject.id, file.id, e)}
-                                style={{
-                                  background: "transparent",
-                                  border: "none",
-                                  color: "#ef4444",
-                                  cursor: "pointer",
-                                  fontSize: "0.875rem",
-                                }}
-                              >
-                                Remove
-                              </button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                  {isProcessing ? 'Processing...' : (confirmType === 'finish' ? 'Yes, Finish It' : (confirmType === 'delete' ? 'Yes, Delete It' : 'Yes, End It'))}
+                </button>
+                <button 
+                  onClick={handleCancelAction}
+                  disabled={isProcessing}
+                  style={{
+                    background: '#F3F4F6',
+                    color: '#4B5563',
+                    border: 'none',
+                    padding: '10px 24px',
+                    borderRadius: '12px',
+                    fontWeight: '600',
+                    cursor: isProcessing ? 'not-allowed' : 'pointer',
+                    opacity: isProcessing ? 0.6 : 1,
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isProcessing) {
+                      e.currentTarget.style.background = '#E5E7EB';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#F3F4F6';
+                  }}
+                >
+                  Cancel, Stay
+                </button>
               </div>
             </div>
           </div>
+        )}
 
-          {showTeamMembers ? (
-            <div
-              style={{
-                background: "#0f172a",
-                border: "1px solid #1e293b",
-                borderTop: "3px solid #06b6d4",
-                borderRadius: "10px",
-                padding: "1rem",
-                height: "fit-content",
-              }}
-            >
-              <h3 style={{ marginBottom: "1rem" }}>Team Members</h3>
-              {staticTeamMembers.map((m, i) => (
-                <div key={i} style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-                  <div
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: "50%",
-                      background: m.color,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {m.name.split(" ").map((n) => n[0]).join("")}
-                  </div>
-                  <div>{m.name}</div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div
-              style={{
-                background: "#0f172a",
-                border: "1px solid #1e293b",
-                borderTop: "3px solid #06b6d4",
-                borderRadius: "10px",
-                padding: "1rem",
-                height: "fit-content",
-              }}
-            >
-              <h3 style={{ marginBottom: "1rem" }}>Team Members</h3>
-              <div style={{ color: "#64748b", textAlign: "center", padding: "2rem" }}>
-                No team members assigned yet
-              </div>
-            </div>
-          )}
-        </div>
+        <style>{`
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          @keyframes scaleIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+          }
+          @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+          }
+        `}</style>
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#020617",
-        color: "white",
-        fontFamily:
-          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      }}
-    >
-      <nav
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "1rem 2rem",
-          borderBottom: "2px solid #06b6d4",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <span style={{ fontSize: "1.5rem", color: "#22d3ee" }}>
-            ProGit
-          </span>
-          <span style={{ color: "#64748b" }}>/ Dashboard</span>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <span>Dashboard</span>
-          <span>Project</span>
-          <div
-            style={{
-              background: "#0891b2",
-              width: "32px",
-              height: "32px",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: "bold",
-            }}
-          >
-            {user?.name?.[0] || "U"}
-          </div>
-          <span>{user?.name || "john_doe"}</span>
-          <button
-            onClick={onLogout}
-            style={{
-              background: "#ef4444",
-              border: "none",
-              padding: "6px 12px",
-              borderRadius: "6px",
-              color: "white",
-              cursor: "pointer",
-            }}
-          >
-            Logout
-          </button>
-        </div>
-      </nav>
-
-      <div style={{ padding: "2rem" }}>
-        <h1 style={{ fontSize: "2rem", marginBottom: "0.25rem" }}>
-          Dashboard
-        </h1>
-        <p style={{ color: "#94a3b8", marginBottom: "2rem" }}>
-          Welcome back, {user?.name || "john_doe"}.
-        </p>
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "1.5rem",
-          }}
-        >
-          <h2
-            style={{
-              borderBottom: "2px solid #06b6d4",
-              display: "inline-block",
-              paddingBottom: "4px",
-            }}
-          >
-            My Projects
-          </h2>
-          <button
-            onClick={() => setShowModal(true)}
-            style={{
-              background: "#06b6d4",
-              color: "#022c22",
-              border: "none",
-              padding: "8px 14px",
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontWeight: "500",
-            }}
-          >
-            + New Project
-          </button>
-        </div>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
-            gap: "1.5rem",
-          }}
-        >
-          {projects.map((project) => (
-            <div
-              key={project.id}
-              onClick={() => setSelectedProject(project)}
-              style={{
-                cursor: "pointer",
-                background: "#020617",
-                border: "1px solid #0f172a",
-                borderTop: `3px solid ${project.isCompleted ? "#22c55e" : "#06b6d4"}`,
-                borderRadius: "10px",
-                padding: "1.2rem",
-              }}
-            >
-              <h3 style={{ margin: 0 }}>{project.name}</h3>
-              <p style={{ color: "#64748b", fontSize: "0.85rem", marginTop: "0.5rem" }}>
-                {project.description}
-              </p>
-              {project.goalDate && !project.isCompleted && (
-                <div style={{ marginTop: "0.75rem", fontSize: "0.75rem", color: "#22d3ee" }}>
-                  Goal: {formatDate(project.goalDate)} at {project.goalTime}
-                </div>
-              )}
-              {project.isCompleted && (
-                <div style={{ marginTop: "0.75rem", fontSize: "0.75rem", color: "#22c55e" }}>
-                  ✓ Goal Completed!
-                </div>
-              )}
-              {(projectFiles[project.id] || []).length > 0 && (
-                <div style={{ marginTop: "10px" }}>
-                  <div style={{ fontSize: "0.7rem", color: "#64748b", marginBottom: "4px" }}>
-                    Files ({projectFiles[project.id].length}):
+    <div className="min-vh-100 p-4" style={gradientBg}>
+      <div className="container">
+        <div className="card shadow-lg border-0 rounded-4">
+          <div className="card-body p-4">
+            <div className="d-flex justify-content-between align-items-center pb-3 border-bottom">
+              <div>
+                <h1 className="h2 mb-1" style={{ color: "#1E3A4D" }}>Dashboard</h1>
+                <p className="text-muted mb-0">Welcome back, {user?.name || "john_doe"}.</p>
+              </div>
+              <div className="d-flex align-items-center gap-3">
+                <div className="d-flex align-items-center gap-2 bg-light rounded-5 px-3 py-2">
+                  <div className="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white fw-bold" style={{ width: "42px", height: "42px" }}>
+                    {user?.name?.[0] || "U"}
                   </div>
-                  {(projectFiles[project.id] || []).slice(0, 2).map((file) => (
-                    <div
-                      key={file.id}
-                      style={{
-                        fontSize: "0.7rem",
-                        color: "#22d3ee",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        background: "#0f172a",
-                        padding: "4px 6px",
-                        borderRadius: "6px",
-                        marginTop: "4px",
+                  <div>
+                    <div className="fw-bold" style={{ color: "#1F3B4C" }}>{user?.name || "john_doe"}</div>
+                    <small className="text-muted">Product Studio</small>
+                  </div>
+                </div>
+                <button className="btn btn-danger" onClick={onLogout}>Logout</button>
+              </div>
+            </div>
+
+            <div className="d-flex justify-content-between align-items-center my-4">
+              <h2 className="h3 fw-bold mb-0" style={{ color: "#1E3A4D", borderBottom: "3px solid #2B6A9F", display: "inline-block", paddingBottom: "4px" }}>
+                My Projects
+              </h2>
+              <button className="btn text-white px-4 py-2 rounded-3" style={primaryGradient} onClick={() => setShowModal(true)}>
+                + New Project
+              </button>
+            </div>
+
+            <div className="row g-4">
+              {sortedProjects.map((project) => {
+                const status = getStatusInfo(project);
+                return (
+                  <div key={project.id} className="col-md-6 col-lg-3">
+                    <div 
+                      className="card h-100 border-0 shadow-sm rounded-4"
+                      style={{ 
+                        cursor: "pointer", 
+                        borderTop: `3px solid ${status.borderColor}`,
+                        transition: "all 0.3s ease",
+                        opacity: project.isCompleted || project.isEnded ? 0.75 : 1,
+                        backgroundColor: status.bg
+                      }}
+                      onClick={() => setSelectedProject(project)}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = "translateY(-8px)";
+                        e.currentTarget.style.boxShadow = "0 20px 30px -12px rgba(0, 0, 0, 0.2)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = "translateY(0)";
+                        e.currentTarget.style.boxShadow = "";
                       }}
                     >
-                      <span>
-                        {getFileIcon(file.name)} {file.name}
-                      </span>
-                      <span style={{ color: "#64748b" }}>
-                        {formatFileSize(file.size)}
-                      </span>
+                      <div className="card-body">
+                        <div className="d-flex justify-content-between align-items-start">
+                          <h5 className="card-title fw-bold" style={{ color: status.color }}>
+                            {project.name}
+                          </h5>
+                          <span 
+                            className="badge rounded-pill px-2 py-1"
+                            style={{ 
+                              background: status.badgeColor,
+                              fontSize: "0.7rem"
+                            }}
+                          >
+                            {status.text === "Ended" ? "⚠️ Ended" : (status.text === "Finished" ? "✓ Finished" : "● Ongoing")}
+                          </span>
+                        </div>
+                        <p className="card-text text-muted small mt-2">{project.description}</p>
+                        {project.goalDate && !project.isCompleted && !project.isEnded && (
+                          <div className="small fw-semibold mt-2" style={{ color: "#2B6A9F" }}>
+                            Goal: {formatDate(project.goalDate)} at {project.goalTime}
+                          </div>
+                        )}
+                        {project.isCompleted && (
+                          <div className="small fw-semibold mt-2 text-secondary">✓ Project Finished</div>
+                        )}
+                        {project.isEnded && !project.isCompleted && (
+                          <div className="small fw-semibold mt-2 text-danger">⚠️ Project Ended</div>
+                        )}
+                        {(projectFiles[project.id] || []).length > 0 && (
+                          <div className="mt-2">
+                            <div className="small text-muted mb-1">Files ({projectFiles[project.id].length}):</div>
+                            {(projectFiles[project.id] || []).slice(0, 2).map((file) => (
+                              <div key={file.id} className="bg-light rounded-2 p-1 px-2 mb-1 small d-flex justify-content-between">
+                                <span>{getFileIcon(file.name)} {file.name}</span>
+                                <span className="text-muted">{formatFileSize(file.size)}</span>
+                              </div>
+                            ))}
+                            {(projectFiles[project.id] || []).length > 2 && (
+                              <div className="small text-muted mt-1">+{(projectFiles[project.id] || []).length - 2} more files</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  ))}
-                  {(projectFiles[project.id] || []).length > 2 && (
-                    <div style={{ fontSize: "0.7rem", color: "#64748b", marginTop: "4px" }}>
-                      +{(projectFiles[project.id] || []).length - 2} more files
-                    </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                );
+              })}
             </div>
-          ))}
+          </div>
         </div>
       </div>
 
       {showModal && (
-        <div
-          onClick={() => setShowModal(false)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.8)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: "#0f172a",
-              borderRadius: "12px",
-              borderTop: "3px solid #06b6d4",
-              padding: "2rem",
-              width: "100%",
-              maxWidth: "500px",
-            }}
-          >
-            <h2 style={{ color: "white", fontSize: "1.5rem", marginBottom: "0.5rem" }}>
-              Create New Project
-            </h2>
-            <p style={{ color: "#64748b", fontSize: "0.875rem", marginBottom: "1.5rem" }}>
-              Fill in the details to create a new project.
-            </p>
+        <div className="modal show d-block" tabIndex="-1" style={{ background: "rgba(0,0,0,0.5)" }} onClick={() => setShowModal(false)}>
+          <div className="modal-dialog modal-dialog-centered" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content rounded-4">
+              <div className="modal-body p-4">
+                <h4 className="modal-title mb-2" style={{ color: "#1E3A4D" }}>Create New Project</h4>
+                <p className="text-muted small mb-4">Fill in the details to create a new project.</p>
 
-            <input
-              type="text"
-              placeholder="Project Name"
-              value={newProject.name}
-              onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                marginBottom: "1rem",
-                background: "#1e293b",
-                border: "1px solid #334155",
-                borderRadius: "8px",
-                color: "white",
-              }}
-            />
-            <textarea
-              placeholder="Description"
-              value={newProject.description}
-              onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                marginBottom: "1rem",
-                background: "#1e293b",
-                border: "1px solid #334155",
-                borderRadius: "8px",
-                color: "white",
-                minHeight: "80px",
-              }}
-            />
-            <input
-              type="date"
-              placeholder="Goal Date"
-              value={newProject.goalDate}
-              onChange={(e) => setNewProject({ ...newProject, goalDate: e.target.value })}
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                marginBottom: "1rem",
-                background: "#1e293b",
-                border: "1px solid #334155",
-                borderRadius: "8px",
-                color: "white",
-              }}
-            />
-            <input
-              type="time"
-              placeholder="Goal Time"
-              value={newProject.goalTime}
-              onChange={(e) => setNewProject({ ...newProject, goalTime: e.target.value })}
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                marginBottom: "1.5rem",
-                background: "#1e293b",
-                border: "1px solid #334155",
-                borderRadius: "8px",
-                color: "white",
-              }}
-            />
+                {dateError && (
+                  <div className="alert alert-danger py-2 mb-3" style={{ fontSize: "0.875rem", borderRadius: "12px" }}>
+                    ⚠️ {dateError}
+                  </div>
+                )}
 
-            <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
-              <button
-                onClick={handleCreateProject}
-                style={{
-                  padding: "0.75rem 2rem",
-                  background: "#06b6d4",
-                  border: "none",
-                  borderRadius: "8px",
-                  color: "white",
-                  cursor: "pointer",
-                }}
-              >
-                Create
-              </button>
-              <button
-                onClick={() => setShowModal(false)}
-                style={{
-                  padding: "0.75rem 2rem",
-                  background: "#475569",
-                  border: "none",
-                  borderRadius: "8px",
-                  color: "white",
-                  cursor: "pointer",
-                }}
-              >
-                Cancel
-              </button>
+                <input
+                  type="text"
+                  className="form-control mb-3 py-3"
+                  placeholder="Project Name"
+                  value={newProject.name}
+                  onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                />
+                <textarea
+                  className="form-control mb-3"
+                  placeholder="Description"
+                  rows="3"
+                  value={newProject.description}
+                  onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
+                />
+                <input
+                  type="date"
+                  className="form-control mb-3 py-3"
+                  placeholder="Goal Date"
+                  value={newProject.goalDate}
+                  onChange={handleDateChange}
+                />
+                <input
+                  type="time"
+                  className="form-control mb-4 py-3"
+                  placeholder="Goal Time"
+                  value={newProject.goalTime}
+                  onChange={handleTimeChange}
+                />
+
+                <div className="d-flex gap-3 justify-content-center">
+                  <button 
+                    className="btn text-white px-4 py-2 rounded-3" 
+                    style={primaryGradient} 
+                    onClick={handleCreateProject}
+                    disabled={!!dateError}
+                  >
+                    Create
+                  </button>
+                  <button className="btn btn-secondary px-4 py-2 rounded-3" onClick={() => {
+                    setShowModal(false);
+                    setDateError("");
+                    setNewProject({ name: "", description: "", goalDate: "", goalTime: "" });
+                  }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

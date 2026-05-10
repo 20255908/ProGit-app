@@ -26,7 +26,7 @@ function Login({ onLogin, onSwitchToSignup }) {
             localStorage.setItem("currentUser", JSON.stringify(userData));
             onLogin(userData);
         } else {
-            setError("Invalid credentials. Please create an account first.");
+            setError("Invalid credentials. Try: devbuds@progit.com / 123456");
         }
     };
 
@@ -66,6 +66,9 @@ function Login({ onLogin, onSwitchToSignup }) {
                     >
                         Create Account
                     </a>
+                </p>
+                <p className="text-muted small mt-3" style={{ fontSize: "0.75rem", opacity: 0.7 }}>
+                    Demo Account: "email: devbuds@progit.com / password: 123456"
                 </p>
             </div>
         </div>
@@ -182,6 +185,21 @@ function App() {
     const [showSignup, setShowSignup] = useState(false);
 
     useEffect(() => {
+        // For dummy account creation
+        const users = JSON.parse(localStorage.getItem("users") || "[]");
+        const defaultUser = {
+            fullName: "DevBuds ProGit",
+            email: "devbuds@progit.com",
+            password: "123456"
+        };
+        
+        const userExists = users.find(u => u.email === defaultUser.email);
+        if (!userExists) {
+            users.push(defaultUser);
+            localStorage.setItem("users", JSON.stringify(users));
+            console.log("Dummy account created: devbuds@progit.com / 123456");
+        }
+        
         const savedUser = localStorage.getItem("currentUser");
         if (savedUser) {
             setUser(JSON.parse(savedUser));
