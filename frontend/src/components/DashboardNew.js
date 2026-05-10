@@ -9,9 +9,10 @@ function DashboardNew({ user, onLogout }) {
       description: "Revamp the landing page UI and UX flows for Q3 launch.",
       goalDate: "2026-12-31",
       goalTime: "23:59",
-      isCompleted: false,
-      isEnded: false,
+      status: "active",
+      label: "ongoing",
       isStatic: true,
+      createdAt: 1704067200000,
     },
     {
       id: 2,
@@ -19,9 +20,10 @@ function DashboardNew({ user, onLogout }) {
       description: "Connect payment gateway and third-party auth services.",
       goalDate: "2026-11-15",
       goalTime: "18:00",
-      isCompleted: false,
-      isEnded: false,
+      status: "active",
+      label: "ongoing",
       isStatic: true,
+      createdAt: 1704153600000,
     },
     {
       id: 3,
@@ -29,9 +31,10 @@ function DashboardNew({ user, onLogout }) {
       description: "React Native app — sprint 2 in progress.",
       goalDate: "2026-10-01",
       goalTime: "12:00",
-      isCompleted: false,
-      isEnded: false,
+      status: "active",
+      label: "ongoing",
       isStatic: true,
+      createdAt: 1704240000000,
     },
     {
       id: 4,
@@ -39,9 +42,10 @@ function DashboardNew({ user, onLogout }) {
       description: "ETL pipeline for analytics dashboard ingestion.",
       goalDate: "2026-09-20",
       goalTime: "09:00",
-      isCompleted: false,
-      isEnded: false,
+      status: "active",
+      label: "ongoing",
       isStatic: true,
+      createdAt: 1704326400000,
     },
   ]);
 
@@ -72,23 +76,54 @@ function DashboardNew({ user, onLogout }) {
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  // STATUS PRIORITY
-  const statusPriority = {
-    ongoing: 1,
-    ended: 2,
-    finished: 3,
-    disregarded: 4,
+  // CENTRAL SORT FUNCTION - THE ONLY PLACE SORTING HAPPENS
+  const sortProjects = useCallback((projectsList) => {
+    return [...projectsList].sort((a, b) => {
+      // 1. inactive ALWAYS at bottom
+      if (a.status !== b.status) {
+        return a.status === "active" ? -1 : 1;
+      }
+      // 2. within same status → newest first (higher createdAt = newer)
+      return b.createdAt - a.createdAt;
+    });
+  }, []);
+
+  // Check if project should be inactive (deadline passed)
+  const checkIfInactive = useCallback((project) => {
+    if (project.status === "inactive") return true;
+    if (!project.goalDate) return false;
+    
+    const deadline = new Date(`${project.goalDate} ${project.goalTime || "23:59"}`);
+    const now = new Date();
+    return deadline <= now;
+  }, []);
+
+  // Update status for all projects
+  const updateStatuses = useCallback(() => {
+    setProjects(prevProjects => {
+      const updated = prevProjects.map(p => ({
+        ...p,
+        status: checkIfInactive(p) ? "inactive" : "active",
+        label: checkIfInactive(p) ? "inactive" : p.label
+      }));
+      return sortProjects(updated);
+    });
+  }, [checkIfInactive, sortProjects]);
+
+  // Get display label for UI
+  const getDisplayLabel = (project) => {
+    if (project.label === "finished") return { text: "Finished", color: "#9CA3AF", bg: "#F3F4F6", borderColor: "#9CA3AF", badgeColor: "#9CA3AF" };
+    if (project.label === "ended") return { text: "Ended", color: "#EF4444", bg: "#FEF2F2", borderColor: "#EF4444", badgeColor: "#EF4444" };
+    if (project.label === "disregarded") return { text: "Disregarded", color: "#6B7280", bg: "#E5E7EB", borderColor: "#6B7280", badgeColor: "#6B7280" };
+    if (project.status === "inactive") return { text: "Inactive", color: "#9CA3AF", bg: "#F3F4F6", borderColor: "#9CA3AF", badgeColor: "#9CA3AF" };
+    return { text: "Ongoing", color: "#22C55E", bg: "#FFFFFF", borderColor: "#22C55E", badgeColor: "#22C55E" };
   };
 
-  const getStatusFromProject = (project) => {
-    if (project.status) return project.status;
-    if (project.isDisregarded) return "disregarded";
-    if (project.isCompleted) return "finished";
-    if (project.isEnded) return "ended";
-    return "ongoing";
+  const getDeadlineDate = (goalDate, goalTime) => {
+    if (!goalDate) return null;
+    return new Date(`${goalDate} ${goalTime || "23:59"}`);
   };
 
-  // VALIDATION FUNCTION - checks if selected date/time is in the past
   const isDateInPast = (date, time) => {
     if (!date) return false;
     const deadline = new Date(`${date} ${time || "23:59"}`);
@@ -96,41 +131,8 @@ function DashboardNew({ user, onLogout }) {
     return deadline <= now;
   };
 
-  // Get deadline date object safely
-  const getDeadlineDate = (goalDate, goalTime) => {
-    if (!goalDate) return null;
-    return new Date(`${goalDate} ${goalTime || "23:59"}`);
-  };
-
-  const checkIfEnded = useCallback((project) => {
-    if (project.isCompleted) return false;
-    if (!project.goalDate) return false;
-    
-    const deadline = getDeadlineDate(project.goalDate, project.goalTime);
-    if (!deadline) return false;
-    
-    const now = new Date();
-    return deadline <= now;
-  }, []);
-
-  const updateEndedStatus = useCallback(() => {
-    setProjects(prevProjects => {
-      const updated = prevProjects.map(p => ({
-        ...p,
-        isEnded: checkIfEnded(p)
-      }));
-      return [...updated].sort((a, b) => {
-        const statusA = getStatusFromProject(a);
-        const statusB = getStatusFromProject(b);
-        return statusPriority[statusA] - statusPriority[statusB];
-      });
-    });
-  }, [checkIfEnded]);
-
-  // Countdown logic with safety - prevents negative values
-  const getCountdown = (goalDate, goalTime, isCompleted, isEnded) => {
-    if (isCompleted) return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true, display: "Project Finished" };
-    if (isEnded) return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true, display: "Project Ended" };
+  const getCountdown = (goalDate, goalTime, status) => {
+    if (status === "inactive") return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true, display: "Inactive" };
     if (!goalDate) return null;
     
     const deadline = getDeadlineDate(goalDate, goalTime);
@@ -139,9 +141,8 @@ function DashboardNew({ user, onLogout }) {
     const now = new Date();
     const diff = deadline - now;
     
-    // If deadline has passed, mark as ended
     if (diff <= 0) {
-      return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true, display: "Project Ended" };
+      return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true, display: "Inactive" };
     }
     
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -155,39 +156,29 @@ function DashboardNew({ user, onLogout }) {
   useEffect(() => {
     if (!selectedProject) return;
 
-    // Countdown interval for preview page
     const countdownInterval = setInterval(() => {
       const currentProject = projects.find(p => p.id === selectedProject.id);
-      if (currentProject) {
-        const countdown = getCountdown(
-          currentProject.goalDate, 
-          currentProject.goalTime, 
-          currentProject.isCompleted, 
-          currentProject.isEnded
-        );
-        
-        // Auto-mark as ended when countdown reaches zero
-        if (countdown && countdown.isExpired && !currentProject.isCompleted && !currentProject.isEnded && !showConfirmModal && !isProcessing) {
-          setConfirmType('end');
+      if (currentProject && currentProject.status === "active") {
+        const becameInactive = checkIfInactive(currentProject);
+        if (becameInactive && !showConfirmModal && !isProcessing) {
+          setConfirmType('inactive');
           setShowConfirmModal(true);
         }
       }
     }, 1000);
 
     return () => clearInterval(countdownInterval);
-  }, [selectedProject, projects, showConfirmModal, isProcessing]);
+  }, [selectedProject, projects, checkIfInactive, showConfirmModal, isProcessing]);
 
   useEffect(() => {
-    updateEndedStatus();
-    const interval = setInterval(updateEndedStatus, 1000);
+    updateStatuses();
+    const interval = setInterval(updateStatuses, 1000);
     return () => clearInterval(interval);
-  }, [updateEndedStatus]);
+  }, [updateStatuses]);
 
   const handleCreateProject = () => {
-    // Clear previous error
     setDateError("");
     
-    // VALIDATION: Check if date is in the past
     if (newProject.goalDate) {
       const isPast = isDateInPast(newProject.goalDate, newProject.goalTime);
       if (isPast) {
@@ -201,23 +192,19 @@ function DashboardNew({ user, onLogout }) {
       return;
     }
 
-    setProjects([
-      ...projects,
-      {
-        id: Date.now(),
-        name: newProject.name,
-        description: newProject.description || "No description provided",
-        goalDate: newProject.goalDate,
-        goalTime: newProject.goalTime,
-        isCompleted: false,
-        isEnded: false,
-        isStatic: false,
-      },
-    ].sort((a, b) => {
-      const statusA = getStatusFromProject(a);
-      const statusB = getStatusFromProject(b);
-      return statusPriority[statusA] - statusPriority[statusB];
-    }));
+    const newProjectObj = {
+      id: Date.now(),
+      name: newProject.name,
+      description: newProject.description || "No description provided",
+      goalDate: newProject.goalDate,
+      goalTime: newProject.goalTime,
+      status: "active",
+      label: "ongoing",
+      isStatic: false,
+      createdAt: Date.now(),
+    };
+
+    setProjects(prev => sortProjects([...prev, newProjectObj]));
 
     setNewProject({ name: "", description: "", goalDate: "", goalTime: "" });
     setDateError("");
@@ -229,7 +216,6 @@ function DashboardNew({ user, onLogout }) {
     setNewProject({ ...newProject, goalDate: newDate });
     setDateError("");
     
-    // Real-time validation
     if (newDate && newProject.goalTime) {
       if (isDateInPast(newDate, newProject.goalTime)) {
         setDateError("Project deadline cannot be in the past.");
@@ -242,7 +228,6 @@ function DashboardNew({ user, onLogout }) {
     setNewProject({ ...newProject, goalTime: newTime });
     setDateError("");
     
-    // Real-time validation
     if (newProject.goalDate && newTime) {
       if (isDateInPast(newProject.goalDate, newTime)) {
         setDateError("Project deadline cannot be in the past.");
@@ -250,13 +235,18 @@ function DashboardNew({ user, onLogout }) {
     }
   };
 
-  const handleFinishClick = () => {
-    setConfirmType('finish');
+  const handleMarkInactive = () => {
+    setConfirmType('inactive');
     setShowConfirmModal(true);
   };
 
-  const handleEndClick = () => {
-    setConfirmType('end');
+  const handleMarkFinished = () => {
+    setConfirmType('finished');
+    setShowConfirmModal(true);
+  };
+
+  const handleMarkDisregarded = () => {
+    setConfirmType('disregarded');
     setShowConfirmModal(true);
   };
 
@@ -268,18 +258,14 @@ function DashboardNew({ user, onLogout }) {
   const handleConfirmAction = () => {
     setIsProcessing(true);
     
-    if (confirmType === 'finish') {
-      setProjects(prevProjects => {
-        const updatedProjects = prevProjects.map(p => 
-          p.id === selectedProject?.id ? { ...p, isCompleted: true, isEnded: false } : p
+    if (confirmType === 'inactive') {
+      setProjects(prev => {
+        const updated = prev.map(p => 
+          p.id === selectedProject?.id ? { ...p, status: "inactive", label: "ended" } : p
         );
-        return [...updatedProjects].sort((a, b) => {
-          const statusA = getStatusFromProject(a);
-          const statusB = getStatusFromProject(b);
-          return statusPriority[statusA] - statusPriority[statusB];
-        });
+        return sortProjects(updated);
       });
-      setSuccessMessage("✓ Project Finished! Returning to dashboard...");
+      setSuccessMessage("⚠️ Project marked as inactive! Moving to bottom.");
       setShowSuccessToast(true);
       
       setTimeout(() => {
@@ -290,18 +276,32 @@ function DashboardNew({ user, onLogout }) {
         setShowSuccessToast(false);
       }, 1500);
       
-    } else if (confirmType === 'end') {
-      setProjects(prevProjects => {
-        const updatedProjects = prevProjects.map(p => 
-          p.id === selectedProject?.id ? { ...p, isEnded: true, isCompleted: false } : p
+    } else if (confirmType === 'finished') {
+      setProjects(prev => {
+        const updated = prev.map(p => 
+          p.id === selectedProject?.id ? { ...p, status: "inactive", label: "finished" } : p
         );
-        return [...updatedProjects].sort((a, b) => {
-          const statusA = getStatusFromProject(a);
-          const statusB = getStatusFromProject(b);
-          return statusPriority[statusA] - statusPriority[statusB];
-        });
+        return sortProjects(updated);
       });
-      setSuccessMessage("⚠️ Project Ended! Returning to dashboard...");
+      setSuccessMessage("✓ Project finished! Moving to bottom.");
+      setShowSuccessToast(true);
+      
+      setTimeout(() => {
+        setShowConfirmModal(false);
+        setConfirmType(null);
+        setIsProcessing(false);
+        setSelectedProject(null);
+        setShowSuccessToast(false);
+      }, 1500);
+      
+    } else if (confirmType === 'disregarded') {
+      setProjects(prev => {
+        const updated = prev.map(p => 
+          p.id === selectedProject?.id ? { ...p, status: "inactive", label: "disregarded" } : p
+        );
+        return sortProjects(updated);
+      });
+      setSuccessMessage("📌 Project disregarded! Moving to bottom.");
       setShowSuccessToast(true);
       
       setTimeout(() => {
@@ -315,13 +315,9 @@ function DashboardNew({ user, onLogout }) {
     } else if (confirmType === 'delete') {
       const projectIdToDelete = selectedProject?.id;
       
-      setProjects(prevProjects => {
-        const filteredProjects = prevProjects.filter(p => p.id !== projectIdToDelete);
-        return [...filteredProjects].sort((a, b) => {
-          const statusA = getStatusFromProject(a);
-          const statusB = getStatusFromProject(b);
-          return statusPriority[statusA] - statusPriority[statusB];
-        });
+      setProjects(prev => {
+        const filtered = prev.filter(p => p.id !== projectIdToDelete);
+        return sortProjects(filtered);
       });
       
       if (projectIdToDelete) {
@@ -332,7 +328,7 @@ function DashboardNew({ user, onLogout }) {
         });
       }
       
-      setSuccessMessage("🗑️ Project Deleted! Returning to dashboard...");
+      setSuccessMessage("🗑️ Project deleted!");
       setShowSuccessToast(true);
       
       setTimeout(() => {
@@ -452,22 +448,6 @@ function DashboardNew({ user, onLogout }) {
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
-  const getStatusInfo = (project) => {
-    if (project.isCompleted) {
-      return { text: "Finished", color: "#9CA3AF", bg: "#F3F4F6", borderColor: "#9CA3AF", badgeColor: "#9CA3AF" };
-    }
-    if (project.isEnded) {
-      return { text: "Ended", color: "#EF4444", bg: "#FEF2F2", borderColor: "#EF4444", badgeColor: "#EF4444" };
-    }
-    return { text: "Ongoing", color: "#22C55E", bg: "#FFFFFF", borderColor: "#22C55E", badgeColor: "#22C55E" };
-  };
-
-  const sortedProjects = [...projects].sort((a, b) => {
-    const statusA = getStatusFromProject(a);
-    const statusB = getStatusFromProject(b);
-    return statusPriority[statusA] - statusPriority[statusB];
-  });
-
   const gradientBg = {
     background: "linear-gradient(135deg, #1E3A4D 0%, #2B6A9F 100%)",
   };
@@ -476,17 +456,19 @@ function DashboardNew({ user, onLogout }) {
     background: "linear-gradient(145deg, #2B6A9F, #1E4A6E)",
   };
 
+  // USE THE SORT FUNCTION BEFORE RENDER
+  const sortedProjects = sortProjects(projects);
+
   if (selectedProject) {
     const countdown = getCountdown(
       selectedProject.goalDate, 
       selectedProject.goalTime, 
-      selectedProject.isCompleted, 
-      selectedProject.isEnded
+      selectedProject.status
     );
     const projectFileList = projectFiles[selectedProject.id] || [];
-    const isCompleted = selectedProject.isCompleted;
-    const isEnded = selectedProject.isEnded;
+    const isInactive = selectedProject.status === "inactive";
     const showTeamMembers = selectedProject.isStatic === true;
+    const displayLabel = getDisplayLabel(selectedProject);
 
     return (
       <div className="min-vh-100 p-4" style={gradientBg}>
@@ -495,7 +477,7 @@ function DashboardNew({ user, onLogout }) {
             position: 'fixed',
             top: '20px',
             right: '20px',
-            background: isProcessing ? '#22C55E' : (confirmType === 'end' ? '#EF4444' : '#9CA3AF'),
+            background: confirmType === 'finished' ? '#22C55E' : (confirmType === 'inactive' ? '#EF4444' : (confirmType === 'disregarded' ? '#6B7280' : '#9CA3AF')),
             color: 'white',
             padding: '12px 24px',
             borderRadius: '12px',
@@ -538,20 +520,20 @@ function DashboardNew({ user, onLogout }) {
 
               <div className="row mt-4">
                 <div className="col-md-8">
-                  {selectedProject.goalDate && !isCompleted && !isEnded && countdown && !countdown.isExpired && (
+                  {selectedProject.goalDate && !isInactive && countdown && !countdown.isExpired && (
                     <div className="bg-light rounded-4 p-3 mb-4 border-start border-4" style={{ borderLeftColor: "#2B6A9F" }}>
                       <div className="fw-bold" style={{ color: "#2B6A9F" }}>
                         Goal: {formatDate(selectedProject.goalDate)} at {selectedProject.goalTime}
                       </div>
                       <div className="h4 fw-bold my-2" style={{ color: "#1E3A4D" }}>
-                        Countdown: {countdown.days}d {countdown.hours}h {countdown.minutes}m {countdown.seconds}s
+                        Countdown: {countdown.display}
                       </div>
                       <div className="d-flex gap-2 flex-wrap">
-                        <button className="btn btn-success" onClick={handleFinishClick} disabled={isProcessing}>
-                          ✓ Already Finished
+                        <button className="btn btn-success" onClick={handleMarkFinished} disabled={isProcessing}>
+                          ✓ Already Finished This Project
                         </button>
-                        <button className="btn btn-warning" onClick={handleEndClick} disabled={isProcessing}>
-                          ⚠️ End Project
+                        <button className="btn btn-warning" onClick={handleMarkInactive} disabled={isProcessing}>
+                          ⚠️ End This Project
                         </button>
                         <button className="btn btn-danger" onClick={handleDeleteClick} disabled={isProcessing}>
                           🗑️ Delete Project
@@ -560,21 +542,16 @@ function DashboardNew({ user, onLogout }) {
                     </div>
                   )}
 
-                  {selectedProject.goalDate && (isEnded || (countdown && countdown.isExpired)) && (
-                    <div className="bg-danger bg-opacity-10 rounded-4 p-3 mb-4 border-start border-4" style={{ borderLeftColor: "#EF4444" }}>
-                      <div className="fw-bold text-danger">⚠️ Project Has Ended!</div>
-                      <div className="small text-muted mt-1">
-                        Goal was set for {formatDate(selectedProject.goalDate)} at {selectedProject.goalTime}
+                  {(isInactive || (countdown && countdown.isExpired)) && (
+                    <div className="rounded-4 p-3 mb-4 border-start border-4" style={{ borderLeftColor: displayLabel.borderColor, background: displayLabel.bg }}>
+                      <div className="fw-bold" style={{ color: displayLabel.color }}>
+                        {displayLabel.text === "Finished" ? "✓ Project Finished!" : (displayLabel.text === "Disregarded" ? "📌 Project Disregarded" : "⚠️ Project Has Ended!")}
                       </div>
-                    </div>
-                  )}
-
-                  {selectedProject.goalDate && isCompleted && (
-                    <div className="bg-success bg-opacity-10 rounded-4 p-3 mb-4 border-start border-4" style={{ borderLeftColor: "#9CA3AF" }}>
-                      <div className="fw-bold text-secondary">✓ Project Finished!</div>
-                      <div className="small text-muted mt-1">
-                        Original goal was set for {formatDate(selectedProject.goalDate)} at {selectedProject.goalTime}
-                      </div>
+                      {selectedProject.goalDate && (
+                        <div className="small text-muted mt-1">
+                          Goal was set for {formatDate(selectedProject.goalDate)} at {selectedProject.goalTime}
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -704,25 +681,28 @@ function DashboardNew({ user, onLogout }) {
               boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)'
             }} onClick={(e) => e.stopPropagation()}>
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
-                {confirmType === 'finish' ? '✓' : (confirmType === 'delete' ? '🗑️' : '⚠️')}
+                {confirmType === 'finished' ? '✓' : (confirmType === 'delete' ? '🗑️' : (confirmType === 'disregarded' ? '📌' : '⚠️'))}
               </div>
               <h3 style={{ color: '#1E3A4D', marginBottom: '0.75rem' }}>
-                {confirmType === 'finish' ? 'Finish This Project?' : 
-                 (confirmType === 'delete' ? 'Delete This Project?' : 'End This Project?')}
+                {confirmType === 'finished' ? 'Finish This Project?' : 
+                 (confirmType === 'delete' ? 'Delete This Project?' :
+                 (confirmType === 'disregarded' ? 'Disregard This Project?' : 'End This Project?'))}
               </h3>
               <p style={{ color: '#5B6E8C', marginBottom: '1.5rem', lineHeight: '1.5' }}>
-                {confirmType === 'finish' 
-                  ? 'Are you sure you want to finish this project? It will be marked as completed and moved to the finished section.'
+                {confirmType === 'finished' 
+                  ? 'Are you sure you want to finish this project? It will be marked as finished and moved to the bottom.'
                   : (confirmType === 'delete'
                     ? 'Are you sure you want to delete this project? All files and data will be permanently removed. This action cannot be undone.'
-                    : 'Are you sure you want to end this project? The deadline has passed and this action cannot be undone.')}
+                    : (confirmType === 'disregarded'
+                      ? 'Are you sure you want to disregard this project? It will be moved to the bottom of the project list.'
+                      : 'Are you sure you want to end this project? It will be moved to the bottom of the project list.'))}
               </p>
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
                 <button 
                   onClick={handleConfirmAction}
                   disabled={isProcessing}
                   style={{
-                    background: confirmType === 'finish' ? '#22C55E' : '#EF4444',
+                    background: confirmType === 'finished' ? '#22C55E' : (confirmType === 'disregarded' ? '#6B7280' : '#EF4444'),
                     color: 'white',
                     border: 'none',
                     padding: '10px 24px',
@@ -743,7 +723,7 @@ function DashboardNew({ user, onLogout }) {
                     e.currentTarget.style.filter = 'brightness(1)';
                   }}
                 >
-                  {isProcessing ? 'Processing...' : (confirmType === 'finish' ? 'Yes, Finish It' : (confirmType === 'delete' ? 'Yes, Delete It' : 'Yes, End It'))}
+                  {isProcessing ? 'Processing...' : (confirmType === 'finished' ? 'Yes, Finish It' : (confirmType === 'delete' ? 'Yes, Delete It' : (confirmType === 'disregarded' ? 'Yes, Disregard It' : 'Yes, End It')))}
                 </button>
                 <button 
                   onClick={handleCancelAction}
@@ -828,7 +808,7 @@ function DashboardNew({ user, onLogout }) {
 
             <div className="row g-4">
               {sortedProjects.map((project) => {
-                const status = getStatusInfo(project);
+                const status = getDisplayLabel(project);
                 return (
                   <div key={project.id} className="col-md-6 col-lg-3">
                     <div 
@@ -837,7 +817,7 @@ function DashboardNew({ user, onLogout }) {
                         cursor: "pointer", 
                         borderTop: `3px solid ${status.borderColor}`,
                         transition: "all 0.3s ease",
-                        opacity: project.isCompleted || project.isEnded ? 0.75 : 1,
+                        opacity: project.status === "inactive" ? 0.75 : 1,
                         backgroundColor: status.bg
                       }}
                       onClick={() => setSelectedProject(project)}
@@ -862,20 +842,23 @@ function DashboardNew({ user, onLogout }) {
                               fontSize: "0.7rem"
                             }}
                           >
-                            {status.text === "Ended" ? "⚠️ Ended" : (status.text === "Finished" ? "✓ Finished" : "● Ongoing")}
+                            {status.text === "Disregarded" ? "📌 Disregarded" : (status.text === "Ended" ? "⚠️ Ended" : (status.text === "Finished" ? "✓ Finished" : (status.text === "Inactive" ? "● Inactive" : "● Ongoing")))}
                           </span>
                         </div>
                         <p className="card-text text-muted small mt-2">{project.description}</p>
-                        {project.goalDate && !project.isCompleted && !project.isEnded && (
+                        {project.goalDate && project.status === "active" && (
                           <div className="small fw-semibold mt-2" style={{ color: "#2B6A9F" }}>
                             Goal: {formatDate(project.goalDate)} at {project.goalTime}
                           </div>
                         )}
-                        {project.isCompleted && (
+                        {project.status === "inactive" && project.label === "finished" && (
                           <div className="small fw-semibold mt-2 text-secondary">✓ Project Finished</div>
                         )}
-                        {project.isEnded && !project.isCompleted && (
+                        {project.status === "inactive" && project.label === "ended" && (
                           <div className="small fw-semibold mt-2 text-danger">⚠️ Project Ended</div>
+                        )}
+                        {project.status === "inactive" && project.label === "disregarded" && (
+                          <div className="small fw-semibold mt-2" style={{ color: "#6B7280" }}>📌 Project Disregarded</div>
                         )}
                         {(projectFiles[project.id] || []).length > 0 && (
                           <div className="mt-2">
